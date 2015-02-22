@@ -1,2 +1,7 @@
 .vagrant/
 node_modules/
+
+// Ignore any images
+*.png
+*.jpg
+*.jpeg

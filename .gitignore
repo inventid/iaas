@@ -5,3 +5,6 @@ node_modules/
 *.png
 *.jpg
 *.jpeg
+
+// Ignore the database file
+cache.db

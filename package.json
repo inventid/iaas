@@ -1,0 +1,33 @@
+{
+  "name": "live-image-resize",
+  "version": "0.1.0",
+  "description": "Dynamic image resizing service, using AWS S3 as a cache",
+  "main": "resize.js",
+  "dependencies": {
+    "aws-sdk": "^2.1.13",
+    "gm": "^1.17.0",
+    "sqlite3": "^3.0.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inventid/live-image-resize.git"
+  },
+  "keywords": [
+    "image",
+    "resize",
+    "image",
+    "magic",
+    "live",
+    "resize"
+  ],
+  "author": "Rogier Slag",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/inventid/live-image-resize/issues"
+  },
+  "homepage": "https://github.com/inventid/live-image-resize"
+}

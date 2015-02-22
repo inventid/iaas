@@ -1,0 +1,9 @@
+{
+  "aws": {
+    "access_key": "123",
+    "secret_key": "abc",
+    "region": "eu-west-1",
+    "bucket": "bucket",
+    "bucket_url": "https://s3-eu-west-1.amazonaws.com/bucket"
+  }
+}

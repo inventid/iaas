@@ -5,6 +5,7 @@
   "main": "resize.js",
   "dependencies": {
     "aws-sdk": "^2.1.13",
+    "config": "^1.12.0",
     "gm": "^1.17.0",
     "sqlite3": "^3.0.5"
   },

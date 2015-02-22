@@ -8,3 +8,8 @@ node_modules/
 
 // Ignore the database file
 cache.db
+
+// Ignore our secret settings
+config/default.json
+
+images/

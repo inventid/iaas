@@ -84,7 +84,7 @@ Image.checkCacheOrCreate = function(fileName, fileType, resolutionX, resolutionY
   });
 }
 Image.encodeAndUpload = function(fileName, fileType, resolutionX, resolutionY, res ) {
-  file = 'images/' + fileName;
+  file = config.get('originals_dir') + '/' + fileName;
   // Get the image and resize it
   gm(file)
     .options({imageMagick: true})

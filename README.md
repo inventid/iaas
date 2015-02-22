@@ -24,9 +24,48 @@ That token is then valid once, so your client can upload the file directly, with
 
 Logging takes place in a JSON Logstash enabled format, so it's easy to get into Logstash and Kibana. Great for logging!
 
+## Configuration
+
+### Settings
+
+You need to copy the `default.json.example` to `default.json` in the `config` directory.
+Then, specify your own values.
+
+In case you like to use it in production, call the script like this:
+
+````bash
+export NODE_ENV=production
+node rewrite.js
+````
+
+It will then additionally load the `production.json` file.
+
+### Database
+
+To keep the cache links, an additional SQLite database is used.
+On first run, simple first call `node prepare.js` to create the database.
+
+### Originals
+
+For quick saving, the original files are kept in `images` subdirectory (retrieving from AWS S3 is too slow).
+Be sure to keep this data and backup it.
+You can also use the config to let it point to another directory.
+In that case, ensure the user can write there!
+
 ## Current state
 
-Well, at the moment we just live generate an image. Working on it though
+Currently the live generation, copying, and saving of images works without a glitch.
+Try the following calls after you have provisioned the Vagrant machine (see below), and set your configuration.
+
+````
+http://localhost:2337/burn_40_40_2x.jpg
+http://localhost:2337/burn_40_80_2x.jpg
+
+http://localhost:2337/example_800_800.png
+http://localhost:2337/example_800_800.jpg
+````
+
+__Uploading and requesting tokens does not work yet.__
 
 ## Contributing
 

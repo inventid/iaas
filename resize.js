@@ -10,7 +10,9 @@ server = http.createServer(function (req, res) {
   } else if ( req.method === 'POST' ) {
     Image.upload(req, res);
   } else {
+    log('error','405 Method not supported');
     res.writeHead(405, 'Method not supported');
+    res.end();
   }
 });
 
@@ -18,8 +20,10 @@ Image = {}
 Image.get = function(req, res) {
   matches = req.url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
   if ( matches === null ) {
-    console.log('404 Error for ' + res.url);
-    return res.writeHead(404, 'File not found');
+    log('error','404 Error for ' + res.url);
+    res.writeHead(404, 'File not found');
+    res.end();
+    return;
   }
   
   fileName = matches[1];
@@ -32,11 +36,13 @@ Image.get = function(req, res) {
   fileType = matches[6].toLowerCase();
  
   if ( supportedFileType(fileType) === null ) {
-    console.log('Filetype ' + fileType + ' is not supported');
-    return res.writeHead(415, 'Unsupported media type');
+    log('error','Filetype ' + fileType + ' is not supported');
+    res.writeHead(415, 'Unsupported media type');
+    res.end();
+    return;
   }
 
-  console.log('Requesting file ' + fileName + ' in ' + fileType + ' format in a ' + resolutionX + 'x' + resolutionY + 'px resolution');
+  log('info','Requesting file ' + fileName + ' in ' + fileType + ' format in a ' + resolutionX + 'x' + resolutionY + 'px resolution');
 
   if ( !Image.checkCache(fileName, fileType, resolutionX, resolutionY, res) ) {
     // If we get here, the file was not in the cache
@@ -92,6 +98,14 @@ function createToken(req, res) {
   // This way we can directly send the file here and just a small json payload to the app
 }
 
+function log(level,message) {
+  obj = {
+    datetime: new Date(),
+    severity: level,
+    message: message
+  }
+  console.log(JSON.stringify(obj));
+}
 server.listen(1337, '10.0.2.15', function() {
 	console.log("Server started listening");
 });

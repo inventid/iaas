@@ -7,7 +7,7 @@ echo "Upgrading all current packages"
 apt-get upgrade -y > /dev/null 2>&1
 
 echo "Installing new packages"
-apt-get install git curl unzip imagemagick build-essential -y > /dev/null 2>&1
+apt-get install git curl unzip imagemagick build-essential sqlite3 -y > /dev/null 2>&1
 
 echo "Installing node"
 git clone git://github.com/creationix/nvm.git /opt/nvm >> /tmp/provision.log 2>&1
@@ -15,7 +15,7 @@ git clone git://github.com/creationix/nvm.git /opt/nvm >> /tmp/provision.log 2>&
 nvm install 0.10 >> /tmp/provision.log 2>&1
 
 echo "Installing npm"
-npm install -g gm >> /tmp/provision.log 2>&1
+npm install -g aws-sdk gm sqlite3 >> /tmp/provision.log 2>&1
 
 echo "Setting Node default"
 echo ". /opt/nvm/nvm.sh" > /home/vagrant/.bash_login

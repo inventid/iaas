@@ -75,7 +75,7 @@ Image.checkCacheOrCreate = function(fileName, fileType, resolutionX, resolutionY
       if ( !err && data ) {
         // It is in the cache, so redirect to there
         log('info','cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px)');
-        res.writeHead(302, {'Location': data.url});
+        res.writeHead(302, {'Location': data.url, 'Cache-Control': 'public'});
         res.end();
         return;
       } else {
@@ -92,7 +92,10 @@ Image.encodeAndUpload = function(fileName, fileType, resolutionX, resolutionY, r
     .options({imageMagick: true})
     .resize(resolutionX, resolutionY)
     .stream(fileType, function streamOut(err, stdout, stderr) {
-      stdout.pipe(res);
+      r = stdout.pipe(res);
+      r.on('finish',function() {
+        res.end();
+      });
     });
 
   gm(file)
@@ -115,8 +118,11 @@ Image.uploadToCache = function(fileName, fileType, resolutionX, resolutionY, con
     ACL: 'public-read',
     Body: content,
     // We let the client cache this for a month
-    Expires: (new Date()).setMonth(new Date().getMonth+1),
-    ContentType: supportedFileType(fileType)
+    Expires: (new Date()).setMonth(new Date().getMonth()+1)/1000,
+    ContentType: supportedFileType(fileType),
+    // We let any intermediate server cache this result as well
+    CacheControl: 'public'
+
   };
   S3.putObject(upload_params, function(err,data) {
     if ( err ) {
@@ -137,8 +143,10 @@ Image.upload = function(req, res) {
     sentToken = req.headers['x-token']
     consumeToken.run([sentToken], function(err) {
       if ( !err && this.changes === 1 ) {
+        // If there is not error and the token was valid
         matches = req.url.match(/^\/(.*)\.([^.]+)$/);
         if ( supportedFileType(matches[2]) ) {
+            // And we support the filetype
             log('info','Starting to write original file ' + matches[1]);
             original = fs.createWriteStream(config.get('originals_dir') + '/' + matches[1]);
             r = req.pipe(original);
@@ -218,7 +226,7 @@ function log(level,message) {
 }
 
 // And listen±
-server.listen(1337, '10.0.2.15', function() {
+server.listen(1337, config.get('listen_address'), function() {
   console.log("Server started listening");
 });
 

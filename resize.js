@@ -5,6 +5,7 @@ var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('cache.db');
+var uuid = require('node-uuid');
 
 AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
 
@@ -12,8 +13,11 @@ AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: c
 var S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
-var insert = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
-var select = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
+var insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
+var selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
+var insertToken = db.prepare("INSERT INTO tokens (id, valid_until) VALUES (?,datetime('now','+15 minute'))");
+var consumeToken = db.prepare("DELETE FROM tokens WHERE id=? AND valid_until>= datetime('now')");
+var deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now')");
 
 // Create the server
 server = http.createServer(function (req, res) {
@@ -22,7 +26,7 @@ server = http.createServer(function (req, res) {
     Image.get(req, res);
   } else if ( req.method === 'POST' && req.url === '/token' ) {
     // Create a token for a client
-    createToken(req, res);
+    Token.create(req, res);
   } else if ( req.method === 'POST' ) {
     // Process an upload
     Image.upload(req, res);
@@ -66,9 +70,8 @@ Image.get = function(req, res) {
   Image.checkCacheOrCreate(fileName, fileType, resolutionX, resolutionY, res);
 }
 Image.checkCacheOrCreate = function(fileName, fileType, resolutionX, resolutionY, res) {
-  db.serialize(function() {
     // Check if it exists in the cache
-    select.get([fileName, resolutionX, resolutionY, supportedFileType(fileType)],function(err,data) { 
+    selectImage.get([fileName, resolutionX, resolutionY, supportedFileType(fileType)],function(err,data) { 
       if ( !err && data ) {
         // It is in the cache, so redirect to there
         log('info','cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px)');
@@ -81,7 +84,6 @@ Image.checkCacheOrCreate = function(fileName, fileType, resolutionX, resolutionY
         Image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
       }
     });
-  });
 }
 Image.encodeAndUpload = function(fileName, fileType, resolutionX, resolutionY, res ) {
   file = config.get('originals_dir') + '/' + fileName;
@@ -121,19 +123,41 @@ Image.uploadToCache = function(fileName, fileType, resolutionX, resolutionY, con
       log('error','AWS upload error: ' + JSON.stringify(err));
     } else {
       log('info','Uploading of ' + key + ' went very well');
-      db.serialize(function() {
         url = config.get('aws.bucket_url') + '/' + key;
-        insert.run([fileName, resolutionX, resolutionY, supportedFileType(fileType), url],function(err) {
+        insertImage.run([fileName, resolutionX, resolutionY, supportedFileType(fileType), url],function(err) {
           if ( err ) { console.error(err); }
         });
-      });
     }
   });
 
 }
 Image.upload = function(req, res) {
   // Upload the RAW image to AWS S3, stripped of its extension
-  // TODO: Implement!
+  // First check the token
+    sentToken = req.headers['x-token']
+    consumeToken.run([sentToken], function(err) {
+      if ( !err && this.changes === 1 ) {
+        matches = req.url.match(/^\/(.*)\.([^.]+)$/);
+        if ( supportedFileType(matches[2]) ) {
+            log('info','Starting to write original file ' + matches[1]);
+            original = fs.createWriteStream(config.get('originals_dir') + '/' + matches[1]);
+            r = req.pipe(original);
+            r.on('finish', function() {
+              log('info','Finished writing original file ' + matches[1]);
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.write(JSON.stringify({'status': 'OK', 'id': matches[1]}));
+              res.end();
+           });
+        } else {
+          res.writeHead(415, 'Image type not supported');
+          res.end();
+        }
+      } else {
+        log('warn','Invalid or expired token used for upload');
+        res.writeHead('403','Forbidden');
+        res.end();
+      }
+  });  
 }
 
 function supportedFileType(fileType) {
@@ -150,10 +174,38 @@ function supportedFileType(fileType) {
   }
 }
 
-function createToken(req, res) {
+Token = {}
+Token.create = function (req, res) {
   // Here we create a token which is valid for one single upload
   // This way we can directly send the file here and just a small json payload to the app
-  // TODO: Implement!
+  newToken = uuid.v4();
+  insertToken.run([newToken], function(err) {
+    if ( !err ) {
+      res.writeHead(200, {'Content-Type': 'application/json'});
+      responseObject = JSON.stringify({ token: newToken });
+      res.write( responseObject );
+      log('info','Created token successfully');
+      if ( Token.shouldRunCleanup() ) {
+        Token.cleanup();
+      }
+      res.end();
+    } else {
+      log('error','Error when generating token');
+    }
+  });
+}
+Token.shouldRunCleanup = function() {
+  return Math.floor(Math.random()*10) === 0;
+}
+Token.cleanup = function() {
+  log('info','Doing a token cleanup');
+  deleteOldTokens.run([],function(err,data) {
+    if ( !err) {
+      log('info','Cleaned ' + this.changes + ' tokens from the db');
+    } else {
+      log('error','Encountered error ' + err + ' when cleaning up tokens');
+    }
+  });   
 }
 
 function log(level,message) {
@@ -167,6 +219,6 @@ function log(level,message) {
 
 // And listen±
 server.listen(1337, '10.0.2.15', function() {
-	console.log("Server started listening");
+  console.log("Server started listening");
 });
 

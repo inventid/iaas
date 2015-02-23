@@ -33,11 +33,13 @@ For Retina (or HiDpi) displays, the postfix `_2x` will appropriately resize the 
 When uploading, first you will need a token.
 Generally you will filter this out in your loadbalancer, such that only your app can request tokens.
 To do this, send a `POST` request to `http://localhost:2337/token`, and you will receive a token which is valid for 15 minutes.
+As a payload, send which id the token can generate, e.g. `{"id": "someimage"}`.
 The client can then directly use this token to upload a file.
 
 The client uses another `POST` request to `http://localhost:2337/someimage.jpg`, this will cause the `someimage` key to be used.
 A token also should be send along, this is done in the HTTP-Headers in the `X-Token` parameter.
 The token will automatically expire once used.
+The token is only valid for one upload attempt and one id.
 
 ## Configuration
 

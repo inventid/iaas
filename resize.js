@@ -46,8 +46,8 @@ function supportedFileType(fileType) {
     }
 }
 
-var Image = {};
-Image.get = function (req, res) {
+var image = {};
+image.get = function (req, res) {
     var matches = req.url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
     if (matches === null) {
         // Invalid URL
@@ -73,24 +73,24 @@ Image.get = function (req, res) {
 
     log('info', 'Requesting file ' + fileName + ' in ' + fileType + ' format in a ' + resolutionX + 'x' + resolutionY + 'px resolution');
 
-    Image.checkCacheOrCreate(fileName, fileType, resolutionX, resolutionY, res);
+    image.checkCacheOrCreate(fileName, fileType, resolutionX, resolutionY, res);
 };
-Image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, res) {
+image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, res) {
     // Check if it exists in the cache
     selectImage.get([fileName, resolutionX, resolutionY, supportedFileType(fileType)], function (err, data) {
         if (!err && data) {
             // It is in the cache, so redirect to there
             log('info', 'cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px)');
-            res.writeHead(302, {'Location': data.url, 'Cache-Control': 'public'});
+            res.writeHead(307, {'Location': data.url, 'Cache-Control': 'public'});
             res.end();
             return;
         }
         // It does not exist in the cache, so generate and upload
         res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
-        Image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
+        image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
     });
 };
-Image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, res) {
+image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, res) {
     var file = config.get('originals_dir') + '/' + fileName;
     // Get the image and resize it
     gm(file)
@@ -99,7 +99,8 @@ Image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
         .stream(fileType, function (err, stdout, stderr) {
             var r = stdout.pipe(res);
             r.on('finish', function () {
-                res.end();
+                // This is to close the result while a background job will continue to process
+                log('info','Finished sending a converted image');
             });
         });
 
@@ -110,11 +111,11 @@ Image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
             if (!err) {
                 // This might mean we have generated the same file while an upload was in progress.
                 // However this is still better than not being able to server the image
-                Image.uploadToCache(fileName, fileType, resolutionX, resolutionY, stream);
+                image.uploadToCache(fileName, fileType, resolutionX, resolutionY, stream);
             }
         });
 };
-Image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, content) {
+image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, content) {
     // Upload to AWS
     var key = fileName + '_' + resolutionX + 'x' + resolutionY + '.' + fileType;
     var upload_params = {
@@ -142,7 +143,7 @@ Image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, co
         }
     });
 };
-Image.upload = function (req, res) {
+image.upload = function (req, res) {
     // Upload the RAW image to AWS S3, stripped of its extension
     // First check the token
     var sentToken = req.headers['x-token'];
@@ -173,8 +174,8 @@ Image.upload = function (req, res) {
     }
 };
 
-var Token = {};
-Token.create = function (req, res) {
+var token = {};
+token.create = function (req, res) {
     // Here we create a token which is valid for one single upload
     // This way we can directly send the file here and just a small json payload to the app
     var newToken = uuid.v4();
@@ -188,8 +189,8 @@ Token.create = function (req, res) {
             var responseObject = JSON.stringify({ token: newToken });
             res.write(responseObject);
             log('info', 'Created token successfully');
-            if (Token.shouldRunCleanup()) {
-                Token.cleanup();
+            if (token.shouldRunCleanup()) {
+                token.cleanup();
             }
             res.end();
         } else {
@@ -197,10 +198,10 @@ Token.create = function (req, res) {
         }
     });
 };
-Token.shouldRunCleanup = function () {
+token.shouldRunCleanup = function () {
     return Math.floor(Math.random() * 10) === 0;
 };
-Token.cleanup = function () {
+token.cleanup = function () {
     log('info', 'Doing a token cleanup');
     deleteOldTokens.run([], function (err, data) {
         if (!err) {
@@ -214,17 +215,9 @@ Token.cleanup = function () {
 // Create the server
 var app = express();
 app.use(bodyParser.json());
-app.get('/*', function (req, res) {
-    Image.get(req, res);
-});
-
-app.post('/token', function (req, res) {
-    Token.create(req, res);
-});
-
-app.post('/*', function (req, res) {
-    Image.upload(req, res);
-});
+app.get('/*', image.get);
+app.post('/token', token.create);
+app.post('/*', image.upload);
 
 // And listen!
 var server = app.listen(1337, function () {

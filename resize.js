@@ -86,13 +86,19 @@ image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolution
             return;
         }
         // It does not exist in the cache, so generate and upload
-        res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
         image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
     });
 };
 image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, res) {
     var file = config.get('originals_dir') + '/' + fileName;
+    if ( !fs.existsSync(file)) {
+        res.writeHead('404', 'File not found');
+        res.end();
+        log('warn','File ' + fileName + ' was requested but did not exist');
+        return;
+    }
     // Get the image and resize it
+    res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
     gm(file)
         .options({imageMagick: true})
         .resize(resolutionX, resolutionY)

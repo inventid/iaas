@@ -7,5 +7,6 @@
     "bucket_url": "https://s3-eu-west-1.amazonaws.com/bucket"
   },
   "originals_dir": "images",
-  "listen_address": "127.0.0.1"
+  "listen_address": "127.0.0.1",
+  "db_file": "/tmp/db.cache"
 }

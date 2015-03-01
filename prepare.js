@@ -2,7 +2,8 @@
 
 // This file should only run to craete the database and assumes no database is present
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('cache.db');
+var config = require('config');
+var db = new sqlite3.Database(config.get('db_file'));
 
 db.serialize(function () {
     db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), file_type VARCHAR(8), url VARCHAR(255))");

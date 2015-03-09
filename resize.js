@@ -86,34 +86,43 @@ image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolution
             return;
         }
         // It does not exist in the cache, so generate and upload
-        res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
         image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
     });
 };
 image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, res) {
     var file = config.get('originals_dir') + '/' + fileName;
-    // Get the image and resize it
-    gm(file)
-        .options({imageMagick: true})
-        .resize(resolutionX, resolutionY)
-        .stream(fileType, function (err, stdout, stderr) {
-            var r = stdout.pipe(res);
-            r.on('finish', function () {
-                // This is to close the result while a background job will continue to process
-                log('info','Finished sending a converted image');
-            });
-        });
+    fs.exists(file, function (exists) {
+        if (!exists) {
+            res.writeHead('404', 'File not found');
+            res.end();
+            log('warn','File ' + fileName + ' was requested but did not exist');
+            return;
+        }
 
-    gm(file)
-        .options({imageMagick: true})
-        .resize(resolutionX, resolutionY)
-        .toBuffer(fileType, function (err, stream) {
-            if (!err) {
-                // This might mean we have generated the same file while an upload was in progress.
-                // However this is still better than not being able to server the image
-                image.uploadToCache(fileName, fileType, resolutionX, resolutionY, stream);
-            }
-        });
+        // Get the image and resize it
+        res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
+        gm(file)
+            .options({imageMagick: true})
+            .resize(resolutionX, resolutionY)
+            .stream(fileType, function (err, stdout, stderr) {
+                var r = stdout.pipe(res);
+                r.on('finish', function () {
+                    // This is to close the result while a background job will continue to process
+                    log('info','Finished sending a converted image');
+                });
+            });
+
+        gm(file)
+            .options({imageMagick: true})
+            .resize(resolutionX, resolutionY)
+            .toBuffer(fileType, function (err, stream) {
+                if (!err) {
+                    // This might mean we have generated the same file while an upload was in progress.
+                    // However this is still better than not being able to server the image
+                    image.uploadToCache(fileName, fileType, resolutionX, resolutionY, stream);
+                }
+            });
+    });
 };
 image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, content) {
     // Upload to AWS

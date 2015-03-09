@@ -6,7 +6,7 @@ var fs = require('fs');
 var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('cache.db');
+var db = new sqlite3.Database(config.get('db_file'));
 var uuid = require('node-uuid');
 var bodyParser = require('body-parser');
 

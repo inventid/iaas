@@ -26,20 +26,29 @@ Logging takes place in a JSON Logstash enabled format, so it's easy to get into 
 
 ## How to use
 
-First of all, you can start requesting our `example` image.
-In that case, simply do a request in your browser to `http://localhost:2337/example_100_100.png`, and (voila) your image is shown.
+### Requesting an image
+
+You can simply request an image using a plain GET request to `http://localhost:2337/example_100_100.png`.
+This will trigger the server to search for the image with id `example`, and serve it in a PNG format in a `100x100` resolution.
+Depending on earlier requests, the image might be on the CDN (causing a redirect) or be transcoded on the fly and uploaded later.
 For Retina (or HiDpi) displays, the postfix `_2x` will appropriately resize the image to that size (or perform a redirect).
 
-When uploading, first you will need a token.
-Generally you will filter this out in your loadbalancer, such that only your app can request tokens.
-To do this, send a `POST` request to `http://localhost:2337/token`, and you will receive a token which is valid for 15 minutes.
-As a payload, send which id the token can generate, e.g. `{"id": "someimage"}`.
+### Uploading images
+
+In order to upload an image, you need to do a POST request to `/token`.
+This post has an payload of an id in json.
+This endpoint should generally be filtered out by your firewall or loadbalancer.
+The received token is valid for 15 minutes.
 The client can then directly use this token to upload a file.
+
+An example command in curl is `curl -vvv -XPOST http://localhost:1337/token -d '{"id": "test"}' -H "Content-Type: application/json"`
 
 The client uses another `POST` request to `http://localhost:2337/someimage.jpg`, this will cause the `someimage` key to be used.
 A token also should be send along, this is done in the HTTP-Headers in the `X-Token` parameter.
 The token will automatically expire once used.
 The token is only valid for one upload attempt and one id.
+
+An example command in curl is `curl -vvv -XPOST http://localhost:1337/test.jpg -H "X-Token: earlier-return-value" -F "image=@/home/user1/Desktop/test.jpg"`
 
 ## Configuration
 
@@ -69,21 +78,6 @@ Be sure to keep this data and backup it.
 You can also use the config to let it point to another directory.
 In that case, ensure the user can write there!
 
-## Current state
-
-Currently the live generation, copying, and saving of images works without a glitch.
-Try the following calls after you have provisioned the Vagrant machine (see below), and set your configuration.
-
-````
-http://localhost:2337/burn_40_40_2x.jpg
-http://localhost:2337/burn_40_80_2x.jpg
-
-http://localhost:2337/example_800_800.png
-http://localhost:2337/example_800_800.jpg
-````
-
-__Uploading and requesting tokens does not work yet.__
-
 ## Contributing
 
 We have created a [Vagrant](http://vagrantup.com) image available which is ready to use for development.
@@ -91,3 +85,4 @@ Simply install Vagrant, run `vagrant up`, `vagrant ssh`, and `cd /vagrant`.
 Here you can run the server using `node resize.js`.
 
 If you have additions for the code, please [fork the repo](https://github.com/inventid/live-image-resize/fork) and open a Pull Request.
+

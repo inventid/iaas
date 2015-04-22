@@ -109,7 +109,8 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
                 r.on('finish', function () {
                     // This is to close the result while a background job will continue to process
                     log('info','Finished sending a converted image');
-                });
+                    res.end(); 
+               });
             });
 
         gm(file)
@@ -191,6 +192,7 @@ token.create = function (req, res) {
     if (!req.body.id) {
         res.writeHead(400, 'Bad request');
         res.end();
+        return;
     }
     insertToken.run([newToken, req.body.id], function (err) {
         if (!err) {

@@ -2,7 +2,8 @@
 
 var express = require('express');
 var gm = require('gm');
-var fs = require('fs');
+var formidable = require('formidable');
+var fs = require('fs-extra');
 var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
@@ -26,14 +27,15 @@ function prepareDb(callback) {
     db.serialize(function () {
         console.log("Creating the db schema");
         try {
-        db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), file_type VARCHAR(8), url VARCHAR(255))");
-        db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,file_type)");
-    
-        db.run("CREATE TABLE tokens ( id VARCHAR(255), image_id VARCHAR(255), valid_until TEXT)");
-        db.run("CREATE UNIQUE INDEX unique_token ON tokens(id)");
-        db.run("CREATE INDEX token_date ON tokens(id, valid_until)");
-        console.log("Doing the callback from prepareDb");
-        callback();
+            db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), file_type VARCHAR(8), url VARCHAR(255))");
+            db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,file_type)");
+        
+            db.run("CREATE TABLE tokens ( id VARCHAR(255), image_id VARCHAR(255), valid_until TEXT, used INT(1))");
+            db.run("CREATE UNIQUE INDEX unique_token ON tokens(id)");
+            db.run("CREATE UNIQUE INDEX unique_image_request ON tokens(image_id)");
+            db.run("CREATE INDEX token_date ON tokens(id, valid_until, used)");
+            console.log("Doing the callback from prepareDb");
+            callback();
         } catch (e) {
             console.error(e);
         }
@@ -172,23 +174,34 @@ image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, co
     });
 };
 image.upload = function (req, res) {
-    // Upload the RAW image to AWS S3, stripped of its extension
+    // Upload the RAW image to disk, stripped of its extension
     // First check the token
     var sentToken = req.headers['x-token'];
     var matches = req.url.match(/^\/(.*)\.([^.]+)$/);
+    log('info', "Requested image upload for image_id " + matches[1] + " with token " + sentToken);
     if (supportedFileType(matches[2])) {
         // We support the file type
         consumeToken.run([sentToken, matches[1]], function (err) {
             if (!err && this.changes === 1) {
                 // And we support the filetype
                 log('info', 'Starting to write original file ' + matches[1]);
-                var original = fs.createWriteStream(config.get('originals_dir') + '/' + matches[1]);
-                var r = req.pipe(original);
-                r.on('finish', function () {
-                    log('info', 'Finished writing original file ' + matches[1]);
+                var form = new formidable.IncomingForm();
+                form.parse(req, function(err, fields, files) {
                     res.writeHead(200, {'Content-Type': 'application/json'});
                     res.write(JSON.stringify({'status': 'OK', 'id': matches[1]}));
-                    res.end();
+                    res.end();  
+                });
+
+                form.on('end', function(fields, files) {
+                    var temp_path = this.openedFiles[0].path;
+
+                    fs.copy(temp_path, config.get('originals_dir') + '/' + matches[1], function(err) {  
+                        if (err) {
+                            console.error(err);
+                        } else {
+                            log('info', 'Finished writing original file ' + matches[1]);
+                        }
+                    });
                 });
             } else {
                 log('warn', 'Invalid or expired token used for upload');
@@ -212,6 +225,7 @@ token.create = function (req, res) {
         res.end();
         return;
     }
+    // Ensure the id wasnt requested or used previously
     insertToken.run([newToken, req.body.id], function (err) {
         if (!err) {
             res.writeHead(200, {'Content-Type': 'application/json'});
@@ -223,7 +237,9 @@ token.create = function (req, res) {
             }
             res.end();
         } else {
-            log('error', 'Error when generating token');
+           res.writeHead(403, 'Forbidden');
+           res.write(JSON.stringify({error: 'The requested image is already requested'}));
+           res.end();
         }
     });
 };
@@ -245,9 +261,9 @@ function startServer() {
     // Set the queries
     insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
     selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
-    insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until) VALUES (?,?,datetime('now','+15 minute'))");
-    consumeToken = db.prepare("DELETE FROM tokens WHERE id=? AND image_id=? AND valid_until>= datetime('now')");
-    deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now')");
+    insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until, used) VALUES (?,?,datetime('now','+15 minute'), 0)");
+    consumeToken = db.prepare("UPDATE tokens SET used=1 WHERE id=? AND image_id=? AND valid_until>= datetime('now') AND used=0");
+    deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");
 
     // Create the server
     var app = express();

@@ -6,7 +6,7 @@ var fs = require('fs');
 var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database(config.get('db_file'));
+var db;
 var uuid = require('node-uuid');
 var bodyParser = require('body-parser');
 
@@ -16,11 +16,29 @@ AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: c
 var S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
-var insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
-var selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
-var insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until) VALUES (?,?,datetime('now','+15 minute'))");
-var consumeToken = db.prepare("DELETE FROM tokens WHERE id=? AND image_id=? AND valid_until>= datetime('now')");
-var deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now')");
+var insertImage;
+var selectImage;
+var insertToken;
+var consumeToken;
+var deleteOldTokens;
+
+function prepareDb(callback) {
+    db.serialize(function () {
+        console.log("Creating the db schema");
+        try {
+        db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), file_type VARCHAR(8), url VARCHAR(255))");
+        db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,file_type)");
+    
+        db.run("CREATE TABLE tokens ( id VARCHAR(255), image_id VARCHAR(255), valid_until TEXT)");
+        db.run("CREATE UNIQUE INDEX unique_token ON tokens(id)");
+        db.run("CREATE INDEX token_date ON tokens(id, valid_until)");
+        console.log("Doing the callback from prepareDb");
+        callback();
+        } catch (e) {
+            console.error(e);
+        }
+    });
+}
 
 // Central logging. console.log can be replaced by writing to a logfile for example
 function log(level, message) {
@@ -109,7 +127,8 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
                 r.on('finish', function () {
                     // This is to close the result while a background job will continue to process
                     log('info','Finished sending a converted image');
-                });
+                    res.end(); 
+               });
             });
 
         gm(file)
@@ -191,6 +210,7 @@ token.create = function (req, res) {
     if (!req.body.id) {
         res.writeHead(400, 'Bad request');
         res.end();
+        return;
     }
     insertToken.run([newToken, req.body.id], function (err) {
         if (!err) {
@@ -221,15 +241,35 @@ token.cleanup = function () {
     });
 };
 
-// Create the server
-var app = express();
-app.use(bodyParser.json());
-app.get('/*', image.get);
-app.post('/token', token.create);
-app.post('/*', image.upload);
+function startServer() {
+    // Set the queries
+    insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
+    selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
+    insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until) VALUES (?,?,datetime('now','+15 minute'))");
+    consumeToken = db.prepare("DELETE FROM tokens WHERE id=? AND image_id=? AND valid_until>= datetime('now')");
+    deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now')");
 
-// And listen!
-var server = app.listen(1337, function () {
-    console.log("Server started listening");
-});
+    // Create the server
+    var app = express();
+    app.use(bodyParser.json());
+    app.get('/*', image.get);
+    app.post('/token', token.create);
+    app.post('/*', image.upload);
+    
+    // And listen!
+    var server = app.listen(1337, function () {
+        console.log("Server started listening");
+    });
+}
+
+try {
+    fs.statSync(config.get('db_file'));
+    console.log("Using db file: " + config.get('db_file'));
+    db = new sqlite3.Database(config.get('db_file'));
+    startServer();
+} catch (e) {
+    console.log(e);
+    db = new sqlite3.Database(config.get('db_file'));
+    prepareDb(startServer);
+}
 

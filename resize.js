@@ -257,6 +257,13 @@ token.cleanup = function () {
     });
 };
 
+function serverStatus(req, res) {
+    res.writeHead(200, 'OK');
+    res.write('OK');
+    res.end();
+    log('info', 'healthcheck performed');
+}
+
 function startServer() {
     // Set the queries
     insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
@@ -268,6 +275,7 @@ function startServer() {
     // Create the server
     var app = express();
     app.use(bodyParser.json());
+    app.get('/healthcheck', serverStatus);
     app.get('/*', image.get);
     app.post('/token', token.create);
     app.post('/*', image.upload);

@@ -7,9 +7,10 @@ var fs = require('fs-extra');
 var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
-var db;
+var responseTime = require('response-time')
 var uuid = require('node-uuid');
 var bodyParser = require('body-parser');
+var db;
 
 AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
 
@@ -45,11 +46,38 @@ function prepareDb(callback) {
 // Central logging. console.log can be replaced by writing to a logfile for example
 function log(level, message) {
     var obj = {
-        datetime: new Date(),
+        datetime: Date.now(),
         severity: level,
         message: message
     };
     console.log(JSON.stringify(obj));
+}
+
+function logRequest(req, res, time) {
+    var obj = {
+        datetime: Date.now(),
+        method: req.method,
+        url: req.url,
+        client: req.ip,
+        response_time: (time/1e3),
+        response_status: res.statusCode
+    };
+    if(isGetRequest(req, res)) {
+        if(res.statusCode === 200) {
+            obj.cache_hit = false;
+        } else if (res.statusCode === 307) {
+            obj.cache_hit = true
+        }
+        var imageParams = getImageParams(req.url);
+        for(var param in imageParams) {
+            obj[param] = imageParams[param];
+        }
+    }
+    console.log(JSON.stringify(obj));
+}
+
+function isGetRequest(req, res) {
+    return req.url !== '/healthcheck' && req.method === 'GET';
 }
 
 function supportedFileType(fileType) {
@@ -66,10 +94,33 @@ function supportedFileType(fileType) {
     }
 }
 
+function isValidRequest(url) {
+    return splitUrl(url) !== null;
+}
+
+function splitUrl(url) {
+    return url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
+}
+
+function getImageParams(url) {
+    var matches = splitUrl(url);
+    var res = {
+       fileName: matches[1],
+       resolutionX: parseInt(matches[2], 10),
+       resolutionY: parseInt(matches[3], 10),
+       fileType: matches[6].toLowerCase()
+    }
+
+    if (matches[5] !== undefined) {
+        res.resolutionX *= parseInt(matches[5], 10);
+        res.resolutionY *= parseInt(matches[5], 10);
+    }
+    return res;
+}
+
 var image = {};
 image.get = function (req, res) {
-    var matches = req.url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
-    if (matches === null) {
+    if (!isValidRequest(req.url)) {
         // Invalid URL
         log('error', '404 Error for ' + res.url);
         res.writeHead(404, 'File not found');
@@ -77,23 +128,18 @@ image.get = function (req, res) {
         return;
     }
 
-    var fileName = matches[1], resolutionX = parseInt(matches[2], 10), resolutionY = parseInt(matches[3], 10);
-    if (matches[5] !== undefined) {
-        resolutionX *= parseInt(matches[5], 10);
-        resolutionY *= parseInt(matches[5], 10);
-    }
-    var fileType = matches[6].toLowerCase();
+    var params = getImageParams(req.url);
 
-    if (supportedFileType(fileType) === null) {
-        log('error', 'Filetype ' + fileType + ' is not supported');
+    if (supportedFileType(params.fileType) === null) {
+        log('error', 'Filetype ' + params.fileType + ' is not supported');
         res.writeHead(415, 'Unsupported media type');
         res.end();
         return;
     }
 
-    log('info', 'Requesting file ' + fileName + ' in ' + fileType + ' format in a ' + resolutionX + 'x' + resolutionY + 'px resolution');
+    log('info', 'Requesting file ' + params.fileName + ' in ' + params.fileType + ' format in a ' + params.resolutionX + 'x' + params.resolutionY + 'px resolution');
 
-    image.checkCacheOrCreate(fileName, fileType, resolutionX, resolutionY, res);
+    image.checkCacheOrCreate(params.fileName, params.fileType, params.resolutionX, params.resolutionY, res);
 };
 image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, res) {
     // Check if it exists in the cache
@@ -275,10 +321,12 @@ function startServer() {
     // Create the server
     var app = express();
     app.use(bodyParser.json());
+    app.use(responseTime(logRequest));
     app.get('/healthcheck', serverStatus);
     app.get('/*', image.get);
     app.post('/token', token.create);
     app.post('/*', image.upload);
+    
     
     // And listen!
     var server = app.listen(1337, function () {

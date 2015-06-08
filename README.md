@@ -1,5 +1,8 @@
 # Live Image Resize
 
+[![Docker downloads](https://img.shields.io/docker/pulls/rogierslag/live-image-resize.svg)](https://registry.hub.docker.com/u/rogierslag/live-image-resize/)
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/inventid/live-image-resize/blob/master/LICENSE)
+
 ## What is it?
 
 The need to show user generated content is growing on the web.

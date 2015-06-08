@@ -54,11 +54,12 @@ function log(level, message) {
 }
 
 function logRequest(req, res, time) {
+    var remoteIp = req.headers['x-forwarded-for'] || req.ip;
     var obj = {
         datetime: Date.now(),
         method: req.method,
         url: req.url,
-        client: req.ip,
+        client: remoteIp,
         response_time: (time/1e3),
         response_status: res.statusCode
     };

@@ -6,15 +6,15 @@
 ## What is it?
 
 The need to show user generated content is growing on the web.
-However, different clients (mobile apps, or a webclient) might need these images in other resolutions.
+However, different clients (mobile apps, or a web client) might need these images in other resolutions.
 Converting these every single time is time-consuming and inefficient.
 
-Therefore this live image resizer, a joing project between [inventid](https://www.inventid.nl) and [Magnet.me](https://magnet.me), attempts to circumvent these issues.
+Therefore this live image resizer, a joint project between [inventid](https://www.inventid.nl) and [Magnet.me](https://magnet.me), attempts to circumvent these issues.
 
 ## How does it work?
 
 A client can simply request an image, and specify the maximum height, width, and a format (e.g. `/sfsdf_1040_1040.png`).
-To support Apple's retina solution, this can be postfixed with an upscale parameter, e.g. `/sfsdf_1040_1040_2x.png` (but also `_13x` for future use).
+To support Apple's retina solution, this can be suffixed with an upscale parameter, e.g. `/sfsdf_1040_1040_2x.png` (but also `_13x` for future use).
 A quick check is made whether this image was previously scaled to that resolution.
 
 If yes, a redirect is given to the cache location of that image (currently AWS S3).

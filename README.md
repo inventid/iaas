@@ -1,7 +1,7 @@
 # Live Image Resize
 
 [![Docker downloads](https://img.shields.io/docker/pulls/rogierslag/live-image-resize.svg)](https://registry.hub.docker.com/u/rogierslag/live-image-resize/)
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/inventid/live-image-resize/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/inventid/live-image-resize.svg)](https://github.com/inventid/live-image-resize/blob/master/LICENSE)
 
 ## What is it?
 

@@ -105,16 +105,25 @@ function splitUrl(url) {
 
 function getImageParams(url) {
     var matches = splitUrl(url);
-    var res = {
-       fileName: matches[1],
-       resolutionX: parseInt(matches[2], 10),
-       resolutionY: parseInt(matches[3], 10),
-       fileType: matches[6].toLowerCase()
-    }
-
-    if (matches[5] !== undefined) {
-        res.resolutionX *= parseInt(matches[5], 10);
-        res.resolutionY *= parseInt(matches[5], 10);
+    var res;
+    if( matches !== null ) {
+        res = {
+           fileName: matches[1],
+           resolutionX: parseInt(matches[2], 10),
+           resolutionY: parseInt(matches[3], 10),
+           fileType: matches[6].toLowerCase()
+        };
+    
+        if (matches[5] !== undefined) {
+            res.resolutionX *= parseInt(matches[5], 10);
+            res.resolutionY *= parseInt(matches[5], 10);
+        }
+    } else {
+        matches = url.match(/^\/(.*)\.([^.]+)$/);
+        res = {
+            fileName: matches[1],
+            fileType: matches[2].toLowerCase()
+        };
     }
     return res;
 }
@@ -261,6 +270,27 @@ image.upload = function (req, res) {
         res.end();
     }
 };
+image.getOriginal = function (req, res) {
+    var matches = req.url.match(/^\/(.*)\.([^.]+)$/);
+    log('info', "Requested original image " + matches[1] + " in format " + matches[2]);
+    if (supportedFileType(matches[2])) {
+        var file = config.get('originals_dir') + '/' + matches[1];
+        fs.exists(file, function (exists) {
+            if (!exists) {
+                res.writeHead('404', 'File not found');
+                res.end();
+                log('warn','File ' + fileName + ' was requested but did not exist');
+                return;
+            }
+
+            // Get the image and resize it
+            res.writeHead(200, {'Content-Type': supportedFileType(matches[2])});
+            fs.readFile(file, function (err, data) {
+               res.end(data);
+            });
+        });
+    }
+};
 
 var token = {};
 token.create = function (req, res) {
@@ -324,7 +354,9 @@ function startServer() {
     app.use(bodyParser.json());
     app.use(responseTime(logRequest));
     app.get('/healthcheck', serverStatus);
-    app.get('/*', image.get);
+    app.get('/*_*_*_*x.*', image.get);
+    app.get('/*_*_*.*', image.get);
+    app.get('/*.*', image.getOriginal);
     app.post('/token', token.create);
     app.post('/*', image.upload);
     

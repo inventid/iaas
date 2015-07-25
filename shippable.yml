@@ -1,0 +1,10 @@
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+
+script:
+  - true
+

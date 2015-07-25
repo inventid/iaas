@@ -1,17 +1,12 @@
-FROM ubuntu:14.04.2
+FROM node:latest
 MAINTAINER Rogier Slag
 
-# Make the machine up to date and install some dependencies
-RUN apt-get install -y software-properties-common python && \
-    add-apt-repository ppa:chris-lea/node.js && \
-    apt-get remove -y software-properties-common python && \
-    apt-get autoremove -y && \
-    apt-get clean
-RUN echo "deb http://us.archive.ubuntu.com/ubuntu/ precise universe" >> /etc/apt/sources.list
 RUN apt-get update && \
-    apt-get install -y imagemagick build-essential sqlite3 make gcc nodejs && \
+    apt-get install -y imagemagick sqlite3 && \
     apt-get autoremove -y && \
     apt-get clean
+
+RUN npm install -g pm2
 
 # Export the database, originals dir and the config dir
 RUN mkdir /opt/live-image-resize
@@ -31,5 +26,5 @@ ADD resize.js /opt/live-image-resize/resize.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
-CMD ["/usr/bin/node", "resize.js"]
+CMD ["/usr/local/bin/pm2", "start", "resize.js", "--no-daemon", "--instances=0"]
 

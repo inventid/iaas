@@ -26,5 +26,5 @@ ADD resize.js /opt/live-image-resize/resize.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
-CMD ["/usr/local/bin/pm2", "start", "resize.js", "--no-daemon", "--instances=0"]
+CMD ["/usr/local/bin/pm2", "start", "resize.js", "--no-daemon", "--instances=1"]
 

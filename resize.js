@@ -279,7 +279,7 @@ image.getOriginal = function (req, res) {
             if (!exists) {
                 res.writeHead('404', 'File not found');
                 res.end();
-                log('warn','File ' + fileName + ' was requested but did not exist');
+                log('warn','File ' + matches[1] + ' was requested but did not exist');
                 return;
             }
 
@@ -315,7 +315,7 @@ token.create = function (req, res) {
             res.end();
         } else {
            res.writeHead(403, 'Forbidden');
-           res.write(JSON.stringify({error: 'The requested image is already requested'}));
+           res.write(JSON.stringify({error: 'The requested image_id is already requested'}));
            res.end();
         }
     });

@@ -18,6 +18,8 @@ echo "Installing npm stuff"
 cd /vagrant
 npm install >> /tmp/provision.log 2>&1
 
+npm install -g nodemon
+
 echo "Setting Node default"
 echo ". /opt/nvm/nvm.sh" > /home/vagrant/.bash_login
 echo "nvm use 0.10" >> /home/vagrant/.bash_login

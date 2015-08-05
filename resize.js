@@ -244,6 +244,12 @@ image.upload = function (req, res) {
         var form = new formidable.IncomingForm();
 
         form.parse(req, function (err, fields, files) {
+          if (err) {
+            console.error(err);
+            res.writeHead(500, 'Internal server error');
+            res.end(JSON.stringify(err));
+            return;
+          }
           var temp_path = files.image.path;
           var destination_path = config.get('originals_dir') + '/' + matches[1];
           console.log(err, files, destination_path);
@@ -251,24 +257,32 @@ image.upload = function (req, res) {
           fs.copy(temp_path, destination_path, function (err) {
             if (err) {
               console.error(err);
-            } else {
-              gm(destination_path).options({imageMagick: true})
-                .size(function (err, value) {
-                  var original_height = value.height ? value.height : null;
-                  var original_width = value.width ? value.width : null;
-
-                  res.writeHead(200, {'Content-Type': 'application/json'});
-                  res.write(JSON.stringify({
-                      status: 'OK',
-                      id: matches[1],
-                      original_height: original_height,
-                      original_width: original_width
-                    })
-                  );
-                  res.end();
-                  log('info', 'Finished writing original file ' + matches[1]);
-                });
+              res.writeHead(500, 'Internal server error');
+              res.end(JSON.stringify(err));
+              return;
             }
+            gm(destination_path).options({imageMagick: true})
+              .size(function (err, value) {
+                var original_height = null;
+                var original_width = null;
+                if (!err) {
+                  // This is an intentional swallow of errors, since it does not affect the situation too much
+                  original_height = value.height ? value.height : null;
+                  original_width = value.width ? value.width : null;
+                }
+
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.write(JSON.stringify({
+                    status: 'OK',
+                    id: matches[1],
+                    original_height: original_height,
+                    original_width: original_width
+                  })
+                );
+                res.end();
+                log('info', 'Finished writing original file ' + matches[1]);
+              });
+
           });
 
         });

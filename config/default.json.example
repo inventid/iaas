@@ -8,5 +8,6 @@
   },
   "originals_dir": "/opt/images",
   "listen_address": "127.0.0.1",
-  "db_file": "/opt/db.cache"
+  "db_file": "/opt/db.cache",
+  "allow_indexing": false
 }

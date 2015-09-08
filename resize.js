@@ -370,6 +370,17 @@ function serverStatus(req, res) {
   log('info', 'healthcheck performed');
 }
 
+function robotsTxt(req, res) {
+  res.writeHead(200, 'OK');
+  if ( config.has('allow_indexing') && config.get('allow_indexing') ) {
+    res.write("User-agent: *\nAllow: /");
+  } else {
+    res.write("User-agent: *\nDisallow: /");
+  }
+  res.end();
+  log('info', 'robots.txt served');
+}
+
 function startServer() {
   // Set the queries
   insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
@@ -383,6 +394,7 @@ function startServer() {
   app.use(bodyParser.json());
   app.use(responseTime(logRequest));
   app.get('/healthcheck', serverStatus);
+  app.get('/robots.txt', robotsTxt);
   app.get('/*_*_*_*x.*', image.get);
   app.get('/*_*_*.*', image.get);
   app.get('/*.*', image.getOriginal);

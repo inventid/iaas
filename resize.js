@@ -179,6 +179,7 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
     res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
     gm(file)
       .options({imageMagick: true})
+      .autoOrient()
       .resize(resolutionX, resolutionY)
       .stream(fileType, function (err, stdout, stderr) {
         var r = stdout.pipe(res);
@@ -191,6 +192,7 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
 
     gm(file)
       .options({imageMagick: true})
+      .autoOrient()
       .resize(resolutionX, resolutionY)
       .toBuffer(fileType, function (err, stream) {
         if (!err) {
@@ -254,36 +256,39 @@ image.upload = function (req, res) {
           var destination_path = config.get('originals_dir') + '/' + matches[1];
           console.log(err, files, destination_path);
 
-          fs.copy(temp_path, destination_path, function (err) {
-            if (err) {
-              console.error(err);
-              res.writeHead(500, 'Internal server error');
-              res.end(JSON.stringify(err));
-              return;
-            }
-            gm(destination_path).options({imageMagick: true})
-              .size(function (err, value) {
-                var original_height = null;
-                var original_width = null;
-                if (!err) {
-                  // This is an intentional swallow of errors, since it does not affect the situation too much
-                  original_height = value.height ? value.height : null;
-                  original_width = value.width ? value.width : null;
-                }
+          gm(temp_path).options({imageMagick: true})
+            .autoOrient()
+            .write(destination_path, function (err) {
+              if (err) {
+                console.error(err);
+                res.writeHead(500, 'Internal server error');
+                res.end(JSON.stringify(err));
+                return;
+              }
+              // Yup, we have to re-read the file, since the possible orientation is not taken into account
+              gm(destination_path).options({imageMagick: true})
+                .size(function (err, value) {
+                  var original_height = null;
+                  var original_width = null;
+                  if (!err) {
+                    // This is an intentional swallow of errors, since it does not affect the situation too much
+                    original_height = value.height ? value.height : null;
+                    original_width = value.width ? value.width : null;
+                  }
 
-                res.writeHead(200, {'Content-Type': 'application/json'});
-                res.write(JSON.stringify({
-                    status: 'OK',
-                    id: matches[1],
-                    original_height: original_height,
-                    original_width: original_width
-                  })
-                );
-                res.end();
-                log('info', 'Finished writing original file ' + matches[1]);
-              });
+                  res.writeHead(200, {'Content-Type': 'application/json'});
+                  res.write(JSON.stringify({
+                      status: 'OK',
+                      id: matches[1],
+                      original_height: original_height,
+                      original_width: original_width
+                    })
+                  );
+                  res.end();
+                  log('info', 'Finished writing original file ' + matches[1]);
+                });
 
-          });
+            });
 
         });
 
@@ -372,7 +377,7 @@ function serverStatus(req, res) {
 
 function robotsTxt(req, res) {
   res.writeHead(200, 'OK');
-  if ( config.has('allow_indexing') && config.get('allow_indexing') ) {
+  if (config.has('allow_indexing') && config.get('allow_indexing')) {
     res.write("User-agent: *\nAllow: /");
   } else {
     res.write("User-agent: *\nDisallow: /");

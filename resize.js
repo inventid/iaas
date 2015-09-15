@@ -147,6 +147,12 @@ image.get = function (req, res) {
     return;
   }
 
+  if (params.resolutionX < 0 || params.resolutionY < 0 || params.resolutionX > config.get('constraints.max_width') || params.resolutionY > config.get('constraints.max_height')) {
+    res.writeHead(400, 'Bad request');
+    res.end('The requested image size falls outside of the allowed boundaries of this service.');
+    return;
+  }
+
   log('info', 'Requesting file ' + params.fileName + ' in ' + params.fileType + ' format in a ' + params.resolutionX + 'x' + params.resolutionY + 'px resolution');
 
   image.checkCacheOrCreate(params.fileName, params.fileType, params.resolutionX, params.resolutionY, res);

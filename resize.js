@@ -28,8 +28,8 @@ function prepareDb(callback) {
   db.serialize(function () {
     console.log("Creating the db schema");
     try {
-      db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), file_type VARCHAR(8), url VARCHAR(255))");
-      db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,file_type)");
+      db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), fit VARCHAR(8), file_type VARCHAR(8), url VARCHAR(255))");
+      db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,fit,file_type)");
 
       db.run("CREATE TABLE tokens ( id VARCHAR(255), image_id VARCHAR(255), valid_until TEXT, used INT(1))");
       db.run("CREATE UNIQUE INDEX unique_token ON tokens(id)");
@@ -69,7 +69,7 @@ function logRequest(req, res, time) {
     } else if (res.statusCode === 307) {
       obj.cache_hit = true
     }
-    var imageParams = getImageParams(req.url);
+    var imageParams = getImageParams(req);
     for (var param in imageParams) {
       obj[param] = imageParams[param];
     }
@@ -103,7 +103,15 @@ function splitUrl(url) {
   return url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
 }
 
-function getImageParams(url) {
+function getImageParams(req) {
+  var url = req.url;
+  var queryParams = null;
+  var split = url.indexOf('?');
+  if (split > -1) {
+    queryParams = url.substring(split + 1, url.length);
+    url = url.substring(0, split);
+  }
+
   var matches = splitUrl(url);
   var res;
   if (matches !== null) {
@@ -111,7 +119,8 @@ function getImageParams(url) {
       fileName: matches[1],
       resolutionX: parseInt(matches[2], 10),
       resolutionY: parseInt(matches[3], 10),
-      fileType: matches[6].toLowerCase()
+      fileType: matches[6].toLowerCase(),
+      fit: 'clip'
     };
 
     if (matches[5] !== undefined) {
@@ -125,6 +134,11 @@ function getImageParams(url) {
       fileType: matches[2].toLowerCase()
     };
   }
+
+  if (queryParams === 'fit=crop') {
+    res.fit = 'crop';
+  }
+
   return res;
 }
 
@@ -138,7 +152,7 @@ image.get = function (req, res) {
     return;
   }
 
-  var params = getImageParams(req.url);
+  var params = getImageParams(req);
 
   if (supportedFileType(params.fileType) === null) {
     log('error', 'Filetype ' + params.fileType + ' is not supported');
@@ -155,23 +169,24 @@ image.get = function (req, res) {
 
   log('info', 'Requesting file ' + params.fileName + ' in ' + params.fileType + ' format in a ' + params.resolutionX + 'x' + params.resolutionY + 'px resolution');
 
-  image.checkCacheOrCreate(params.fileName, params.fileType, params.resolutionX, params.resolutionY, res);
+  image.checkCacheOrCreate(params.fileName, params.fileType, params.resolutionX, params.resolutionY, params.fit, res);
 };
-image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, res) {
+image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, fit, res) {
   // Check if it exists in the cache
-  selectImage.get([fileName, resolutionX, resolutionY, supportedFileType(fileType)], function (err, data) {
+  selectImage.get([fileName, resolutionX, resolutionY, fit, supportedFileType(fileType)], function (err, data) {
     if (!err && data) {
       // It is in the cache, so redirect to there
-      log('info', 'cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px)');
+      log('info', 'cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px, fit: ' + fit + ')');
       res.writeHead(307, {'Location': data.url, 'Cache-Control': 'public'});
       res.end();
       return;
     }
+
     // It does not exist in the cache, so generate and upload
-    image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, res);
+    image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, fit, res);
   });
 };
-image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, res) {
+image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, fit, res) {
   var file = config.get('originals_dir') + '/' + fileName;
   fs.exists(file, function (exists) {
     if (!exists) {
@@ -183,17 +198,57 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
 
     // Get the image and resize it
     res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
+
     gm(file)
-      .options({imageMagick: true})
-      .autoOrient()
-      .resize(resolutionX, resolutionY)
-      .stream(fileType, function (err, stdout, stderr) {
-        var r = stdout.pipe(res);
-        r.on('finish', function () {
-          // This is to close the result while a background job will continue to process
-          log('info', 'Finished sending a converted image');
-          res.end();
-        });
+      .size(function (err, size) {
+        var originalRatio = size.width / size.height;
+        var newRatio = resolutionX / resolutionY;
+
+        var cropX = 0;
+        var cropY = 0;
+        var cropWidth = size.width;
+        var cropHeight = size.height;
+
+        if (fit === 'crop') {
+          if (originalRatio > newRatio) {
+            var resizeFactor = size.height / resolutionY;
+            cropWidth = size.width / resizeFactor;
+            cropHeight = resolutionY;
+            cropX = (cropWidth - resolutionX) / 2;
+          }
+          else if (originalRatio < newRatio) {
+            var resizeFactor = size.width / resolutionX;
+            cropWidth = resolutionX;
+            cropHeight = size.height / resizeFactor;
+            cropY = (cropHeight - resolutionY) / 2;
+          }
+
+          this.options({imageMagick : true})
+            .autoOrient()
+            .resize(cropWidth, cropHeight)
+            .crop(resolutionX, resolutionY, cropX, cropY)
+            .stream(fileType, function (err, stdout, stderr) {
+              var r = stdout.pipe(res);
+              r.on('finish', function () {
+                // This is to close the result while a background job will continue to process
+                log('info', 'Finished sending a converted image');
+                res.end();
+              });
+            });
+        }
+        else {
+          this.options({imageMagick : true})
+            .autoOrient()
+            .resize(resolutionX, resolutionY)
+            .stream(fileType, function (err, stdout, stderr) {
+              var r = stdout.pipe(res);
+              r.on('finish', function () {
+                // This is to close the result while a background job will continue to process
+                log('info', 'Finished sending a converted image');
+                res.end();
+              });
+            });
+        }
       });
 
     gm(file)
@@ -204,14 +259,15 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
         if (!err) {
           // This might mean we have generated the same file while an upload was in progress.
           // However this is still better than not being able to server the image
-          image.uploadToCache(fileName, fileType, resolutionX, resolutionY, stream);
+          image.uploadToCache(fileName, fileType, resolutionX, resolutionY, fit, stream);
         }
       });
   });
 };
-image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, content) {
+image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, fit, content) {
   // Upload to AWS
-  var key = fileName + '_' + resolutionX + 'x' + resolutionY + '.' + fileType;
+  var key = fileName + '_' + resolutionX + 'x' + resolutionY + '.' + fit + '.' + fileType;
+  console.log('key: ' + key);
   var upload_params = {
     Bucket: config.get('aws.bucket'),
     Key: key,
@@ -229,7 +285,7 @@ image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, co
     } else {
       log('info', 'Uploading of ' + key + ' went very well');
       var url = config.get('aws.bucket_url') + '/' + key;
-      insertImage.run([fileName, resolutionX, resolutionY, supportedFileType(fileType), url], function (err) {
+      insertImage.run([fileName, resolutionX, resolutionY, fit, supportedFileType(fileType), url], function (err) {
         if (err) {
           console.error(err);
         }
@@ -394,8 +450,8 @@ function robotsTxt(req, res) {
 
 function startServer() {
   // Set the queries
-  insertImage = db.prepare("INSERT INTO images (id, x, y, file_type, url) VALUES (?,?,?,?,?)");
-  selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND file_type=?");
+  insertImage = db.prepare("INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)");
+  selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?");
   insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until, used) VALUES (?,?,datetime('now','+15 minute'), 0)");
   consumeToken = db.prepare("UPDATE tokens SET used=1 WHERE id=? AND image_id=? AND valid_until>= datetime('now') AND used=0");
   deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");

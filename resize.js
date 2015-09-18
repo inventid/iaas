@@ -180,7 +180,7 @@ image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolution
       res.writeHead(307, {'Location': data.url, 'Cache-Control': 'public'});
       res.end();
       return;
-    }
+    }s
 
     // It does not exist in the cache, so generate and upload
     image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, fit, res);
@@ -201,6 +201,10 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
 
     gm(file)
       .size(function (err, size) {
+		if (err) {
+			console.error(err);
+			return;
+		}
         var originalRatio = size.width / size.height;
         var newRatio = resolutionX / resolutionY;
 

@@ -220,7 +220,7 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
             cropHeight = resolutionY;
             cropX = (cropWidth - resolutionX) / 2;
           }
-          else if (originalRatio < newRatio) {
+          else {
             var resizeFactor = size.width / resolutionX;
             cropWidth = resolutionX;
             cropHeight = size.height / resizeFactor;

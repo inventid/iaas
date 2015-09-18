@@ -180,7 +180,7 @@ image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolution
       res.writeHead(307, {'Location': data.url, 'Cache-Control': 'public'});
       res.end();
       return;
-    }s
+    }
 
     // It does not exist in the cache, so generate and upload
     image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, fit, res);

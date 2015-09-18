@@ -7,7 +7,7 @@ echo "Upgrading all current packages"
 apt-get upgrade -y > /dev/null 2>&1
 
 echo "Installing new packages"
-apt-get install git curl unzip imagemagick build-essential sqlite3 python make gcc -y > /dev/null 2>&1
+apt-get install git curl unzip imagemagick graphicsmagick build-essential sqlite3 python make gcc -y > /dev/null 2>&1
 
 echo "Installing node"
 git clone git://github.com/creationix/nvm.git /opt/nvm >> /tmp/provision.log 2>&1

@@ -161,9 +161,30 @@ image.get = function (req, res) {
     return;
   }
 
-  if (params.resolutionX < 0 || params.resolutionY < 0 || params.resolutionX > config.get('constraints.max_width') || params.resolutionY > config.get('constraints.max_height')) {
-    res.writeHead(400, 'Bad request');
-    res.end('The requested image size falls outside of the allowed boundaries of this service.');
+  var valid = true;
+  if (params.resolutionX <= 0) {
+     params.resolutionX = 1;
+     valid = false;
+  }
+  if (params.resolutionY <= 0) {
+     params.resolutionY = 1;
+     valid = false;
+  }
+  if (params.resolutionX > config.get('constraints.max_width')) {
+    params.resolutionX = config.get('constraints.max_width');
+    valid = false;
+  }
+  if (params.resolutionY > config.get('constraints.max_height')) {
+    params.resolutionY = config.get('constraints.max_height');
+    valid = false;
+  }
+
+  if (!valid) {
+    res.writeHead(307, {
+      'Location': '/' + params.fileName + '_' + params.resolutionX + '_' + params.resolutionY + '.' + params.fileType,
+      'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.'
+    });
+    res.end();
     return;
   }
 

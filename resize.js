@@ -7,9 +7,10 @@ var fs = require('fs-extra');
 var config = require('config');
 var AWS = require('aws-sdk');
 var sqlite3 = require('sqlite3').verbose();
-var responseTime = require('response-time')
+var responseTime = require('response-time');
 var uuid = require('node-uuid');
 var bodyParser = require('body-parser');
+var token = require('./token.js');
 var db;
 
 AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
@@ -20,9 +21,6 @@ var S3 = new AWS.S3();
 // Re-use exisiting prepared queries
 var insertImage;
 var selectImage;
-var insertToken;
-var consumeToken;
-var deleteOldTokens;
 
 function prepareDb(callback) {
   db.serialize(function () {
@@ -67,7 +65,7 @@ function logRequest(req, res, time) {
     if (res.statusCode === 200) {
       obj.cache_hit = false;
     } else if (res.statusCode === 307) {
-      obj.cache_hit = true
+      obj.cache_hit = true;
     }
     var imageParams = getImageParams(req);
     for (var param in imageParams) {
@@ -77,7 +75,7 @@ function logRequest(req, res, time) {
   console.log(JSON.stringify(obj));
 }
 
-function isGetRequest(req, res) {
+function isGetRequest(req) {
   return req.url !== '/healthcheck' && req.method === 'GET';
 }
 
@@ -162,14 +160,6 @@ image.get = function (req, res) {
   }
 
   var valid = true;
-  if (params.resolutionX <= 0) {
-    params.resolutionX = 1;
-    valid = false;
-  }
-  if (params.resolutionY <= 0) {
-    params.resolutionY = 1;
-    valid = false;
-  }
   if (params.resolutionX > config.get('constraints.max_width')) {
     params.resolutionX = config.get('constraints.max_width');
     valid = false;
@@ -258,7 +248,7 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
       } else {
         workImageClient = workImageClient.resize(resolutionX, resolutionY);
       }
-      workImageClient.stream(fileType, function (err, stdout, stderr) {
+      workImageClient.stream(fileType, function (err, stdout) {
         var r = stdout.pipe(res);
         r.on('finish', function () {
           // This is to close the result while a background job will continue to process
@@ -303,7 +293,7 @@ image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, fi
     // We let any intermediate server cache this result as well
     CacheControl: 'public'
   };
-  S3.putObject(upload_params, function (err, data) {
+  S3.putObject(upload_params, function (err) {
     if (err) {
       log('error', 'AWS upload error: ' + JSON.stringify(err));
     } else {
@@ -325,7 +315,7 @@ image.upload = function (req, res) {
   log('info', "Requested image upload for image_id " + matches[1] + " with token " + sentToken);
   if (supportedFileType(matches[2])) {
     // We support the file type
-    consumeToken.run([sentToken, matches[1]], function (err) {
+    token.consume(sentToken, matches[1], function (err) {
       if (!err && this.changes === 1) {
         // And we support the filetype
         log('info', 'Starting to write original file ' + matches[1]);
@@ -412,48 +402,6 @@ image.getOriginal = function (req, res) {
   }
 };
 
-var token = {};
-token.create = function (req, res) {
-  // Here we create a token which is valid for one single upload
-  // This way we can directly send the file here and just a small json payload to the app
-  var newToken = uuid.v4();
-  if (!req.body.id) {
-    res.writeHead(400, 'Bad request');
-    res.end();
-    return;
-  }
-  // Ensure the id wasnt requested or used previously
-  insertToken.run([newToken, req.body.id], function (err) {
-    if (!err) {
-      res.writeHead(200, {'Content-Type': 'application/json'});
-      var responseObject = JSON.stringify({token: newToken});
-      res.write(responseObject);
-      log('info', 'Created token successfully');
-      if (token.shouldRunCleanup()) {
-        token.cleanup();
-      }
-      res.end();
-    } else {
-      res.writeHead(403, 'Forbidden');
-      res.write(JSON.stringify({error: 'The requested image_id is already requested'}));
-      res.end();
-    }
-  });
-};
-token.shouldRunCleanup = function () {
-  return Math.floor(Math.random() * 10) === 0;
-};
-token.cleanup = function () {
-  log('info', 'Doing a token cleanup');
-  deleteOldTokens.run([], function (err, data) {
-    if (!err) {
-      log('info', 'Cleaned ' + this.changes + ' tokens from the db');
-    } else {
-      log('error', 'Encountered error ' + err + ' when cleaning up tokens');
-    }
-  });
-};
-
 function serverStatus(req, res) {
   res.writeHead(200, 'OK');
   res.write('OK');
@@ -472,18 +420,23 @@ function robotsTxt(req, res) {
   log('info', 'robots.txt served');
 }
 
+function allowCrossDomain(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "accept, content-type");
+  res.header("Access-Control-Allow-Method", "GET");
+  next();
+}
+
 function startServer() {
   // Set the queries
   insertImage = db.prepare("INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)");
   selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?");
-  insertToken = db.prepare("INSERT INTO tokens (id, image_id, valid_until, used) VALUES (?,?,datetime('now','+15 minute'), 0)");
-  consumeToken = db.prepare("UPDATE tokens SET used=1 WHERE id=? AND image_id=? AND valid_until>= datetime('now') AND used=0");
-  deleteOldTokens = db.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");
 
   // Create the server
   var app = express();
   app.use(bodyParser.json());
   app.use(responseTime(logRequest));
+  app.use(allowCrossDomain);
   app.get('/healthcheck', serverStatus);
   app.get('/robots.txt', robotsTxt);
   app.get('/*_*_*_*x.*', image.get);
@@ -495,6 +448,7 @@ function startServer() {
 
   // And listen!
   var server = app.listen(1337, function () {
+    token.setDb(db);
     console.log("Server started listening");
   });
 }

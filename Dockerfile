@@ -2,7 +2,7 @@ FROM node:latest
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
-    apt-get install -y imagemagick graphicsmagick sqlite3 && \
+    apt-get install -y imagemagick sqlite3 && \
     apt-get autoremove -y && \
     apt-get clean
 
@@ -22,7 +22,7 @@ ADD package.json /opt/live-image-resize/package.json
 RUN cd /opt/live-image-resize && npm install
 
 # Add the application
-ADD *.js /opt/live-image-resize/*.js
+ADD dist/*.js /opt/live-image-resize/*.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize

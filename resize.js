@@ -1,58 +1,32 @@
-'use strict';
+"use strict";
 
-var express = require('express');
-var gm = require('gm');
-var formidable = require('formidable');
-var fs = require('fs-extra');
-var config = require('config');
-var AWS = require('aws-sdk');
-var sqlite3 = require('sqlite3').verbose();
-var responseTime = require('response-time');
-var uuid = require('node-uuid');
-var bodyParser = require('body-parser');
-var token = require('./token.js');
+const express = require('express');
+const gm = require('gm');
+const im = gm.subClass({imageMagick: true});
+const formidable = require('formidable');
+const fs = require('fs-extra');
+const config = require('config');
+const AWS = require('aws-sdk');
+const sqlite3 = require('sqlite3').verbose();
+const responseTime = require('response-time');
+const bodyParser = require('body-parser');
+const token = require('./token.js');
+const log = require('./log.js');
+const helpers = require('./helpers.js');
+const database = require('./database.js');
+const parsing = require('./url-parsing.js');
 var db;
 
-AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
-
 // The AWS config needs to be set before this objectis created
-var S3 = new AWS.S3();
+AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
+const S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
 var insertImage;
 var selectImage;
 
-function prepareDb(callback) {
-  db.serialize(function () {
-    console.log("Creating the db schema");
-    try {
-      db.run("CREATE TABLE images (id VARCHAR(255), x INT(6), y INT(6), fit VARCHAR(8), file_type VARCHAR(8), url VARCHAR(255))");
-      db.run("CREATE UNIQUE INDEX unique_image ON images(id,x,y,fit,file_type)");
-
-      db.run("CREATE TABLE tokens ( id VARCHAR(255), image_id VARCHAR(255), valid_until TEXT, used INT(1))");
-      db.run("CREATE UNIQUE INDEX unique_token ON tokens(id)");
-      db.run("CREATE UNIQUE INDEX unique_image_request ON tokens(image_id)");
-      db.run("CREATE INDEX token_date ON tokens(id, valid_until, used)");
-      console.log("Doing the callback from prepareDb");
-      callback();
-    } catch (e) {
-      console.error(e);
-    }
-  });
-}
-
-// Central logging. console.log can be replaced by writing to a logfile for example
-function log(level, message) {
-  var obj = {
-    datetime: Date.now(),
-    severity: level,
-    message: message
-  };
-  console.log(JSON.stringify(obj));
-}
-
 function logRequest(req, res, time) {
-  var remoteIp = req.headers['x-forwarded-for'] || req.ip;
+  const remoteIp = req.headers['x-forwarded-for'] || req.ip;
   var obj = {
     datetime: Date.now(),
     method: req.method,
@@ -61,288 +35,161 @@ function logRequest(req, res, time) {
     response_time: (time / 1e3),
     response_status: res.statusCode
   };
-  if (isGetRequest(req, res)) {
+  if (parsing.isGetRequest(req)) {
     if (res.statusCode === 200) {
       obj.cache_hit = false;
     } else if (res.statusCode === 307) {
       obj.cache_hit = true;
     }
-    var imageParams = getImageParams(req);
-    for (var param in imageParams) {
-      obj[param] = imageParams[param];
+    var params = parsing.getImageParams(req);
+    for (var param in params) {
+      obj[param] = params[param];
     }
   }
-  console.log(JSON.stringify(obj));
+  log.log('debug', JSON.stringify(obj));
 }
 
-function isGetRequest(req) {
-  return req.url !== '/healthcheck' && req.method === 'GET';
-}
 
-function supportedFileType(fileType) {
-  switch (fileType) {
-    case 'jpg':
-    case 'jpeg':
-    case 'jfif':
-    case 'jpe':
-      return 'image/jpeg';
-    case 'png':
-      return 'image/png';
-    default:
-      return null;
-  }
-}
-
-function isValidRequest(url) {
-  return splitUrl(url) !== null;
-}
-
-function splitUrl(url) {
-  return url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.(.*)/);
-}
-
-function getImageParams(req) {
-  var url = req.url;
-  var queryParams = null;
-  var split = url.indexOf('?');
-  if (split > -1) {
-    queryParams = url.substring(split + 1, url.length);
-    url = url.substring(0, split);
-  }
-
-  var matches = splitUrl(url);
-  var res;
-  if (matches !== null) {
-    res = {
-      fileName: matches[1],
-      resolutionX: parseInt(matches[2], 10),
-      resolutionY: parseInt(matches[3], 10),
-      fileType: matches[6].toLowerCase(),
-      fit: 'clip'
-    };
-
-    if (matches[5] !== undefined) {
-      res.resolutionX *= parseInt(matches[5], 10);
-      res.resolutionY *= parseInt(matches[5], 10);
+const image = {
+  get(req, res)
+  {
+    if (!parsing.isValidRequest(req.url)) {
+      // Invalid URL
+      return helpers.send404(res, req.url);
     }
-  } else {
-    matches = url.match(/^\/(.*)\.([^.]+)$/);
-    res = {
-      fileName: matches[1],
-      fileType: matches[2].toLowerCase()
-    };
-  }
 
-  if (queryParams === 'fit=crop') {
-    res.fit = 'crop';
-  }
+    const params = parsing.getImageParams(req);
 
-  return res;
-}
+    if (parsing.supportedFileType(params.fileType) === null) {
+      return helpers.send415(res, params.fileType);
+    }
 
-var image = {};
-image.get = function (req, res) {
-  if (!isValidRequest(req.url)) {
-    // Invalid URL
-    log('error', '404 Error for ' + res.url);
-    res.writeHead(404, 'File not found');
-    res.end();
-    return;
-  }
+    var valid = true;
+    if (params.resolutionX > config.get('constraints.max_width')) {
+      params.resolutionX = config.get('constraints.max_width');
+      valid = false;
+    }
+    if (params.resolutionY > config.get('constraints.max_height')) {
+      params.resolutionY = config.get('constraints.max_height');
+      valid = false;
+    }
 
-  var params = getImageParams(req);
+    if (!valid) {
+      return helpers.send307DueTooLarge(res, params);
+    }
+    log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`);
 
-  if (supportedFileType(params.fileType) === null) {
-    log('error', 'Filetype ' + params.fileType + ' is not supported');
-    res.writeHead(415, 'Unsupported media type');
-    res.end();
-    return;
-  }
+    image.checkCacheOrCreate(params, res);
+  },
+  checkCacheOrCreate(params, res) {
+    // Check if it exists in the cache
+    selectImage.get([params.fileName, params.resolutionX, params.resolutionY, params.fit, parsing.supportedFileType(params.fileType)], function (err, data) {
+      if (!err && data) {
+        // It is in the cache, so redirect to there
+        return helpers.send307DueToCache(res, params, data.url);
+      }
 
-  var valid = true;
-  if (params.resolutionX > config.get('constraints.max_width')) {
-    params.resolutionX = config.get('constraints.max_width');
-    valid = false;
-  }
-  if (params.resolutionY > config.get('constraints.max_height')) {
-    params.resolutionY = config.get('constraints.max_height');
-    valid = false;
-  }
-
-  if (!valid) {
-    res.writeHead(307, {
-      'Location': '/' + params.fileName + '_' + params.resolutionX + '_' + params.resolutionY + '.' + params.fileType,
-      'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.'
+      // It does not exist in the cache, so generate and upload
+      image.encodeAndUpload(params, res);
     });
-    res.end();
-    return;
-  }
-
-  log('info', 'Requesting file ' + params.fileName + ' in ' + params.fileType + ' format in a ' + params.resolutionX + 'x' + params.resolutionY + 'px resolution');
-
-  image.checkCacheOrCreate(params.fileName, params.fileType, params.resolutionX, params.resolutionY, params.fit, res);
-};
-image.checkCacheOrCreate = function (fileName, fileType, resolutionX, resolutionY, fit, res) {
-  // Check if it exists in the cache
-  selectImage.get([fileName, resolutionX, resolutionY, fit, supportedFileType(fileType)], function (err, data) {
-    if (!err && data) {
-      // It is in the cache, so redirect to there
-      log('info', 'cache hit for ' + fileName + '.' + fileType + '(' + resolutionX + 'x' + resolutionY + 'px, fit: ' + fit + ')');
-      res.writeHead(307, {'Location': data.url, 'Cache-Control': 'public'});
-      res.end();
-      return;
-    }
-
-    // It does not exist in the cache, so generate and upload
-    image.encodeAndUpload(fileName, fileType, resolutionX, resolutionY, fit, res);
-  });
-};
-image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, fit, res) {
-  var file = config.get('originals_dir') + '/' + fileName;
-  fs.exists(file, function (exists) {
-    if (!exists) {
-      res.writeHead('404', 'File not found');
-      res.end();
-      log('warn', 'File ' + fileName + ' was requested but did not exist');
-      return;
-    }
-
-    // Get the image and resize it
-    res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
-
-    gm(file).size(function (err, size) {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      var originalRatio = size.width / size.height;
-      var newRatio = resolutionX / resolutionY;
-
-      var resizeFactor;
-      var cropX = 0;
-      var cropY = 0;
-      var cropWidth = size.width;
-      var cropHeight = size.height;
-
-      if (fit === 'crop') {
-        if (originalRatio > newRatio) {
-          resizeFactor = size.height / resolutionY;
-          cropWidth = size.width / resizeFactor;
-          cropHeight = resolutionY;
-          cropX = (cropWidth - resolutionX) / 2;
-        }
-        else {
-          resizeFactor = size.width / resolutionX;
-          cropWidth = resolutionX;
-          cropHeight = size.height / resizeFactor;
-          cropY = (cropHeight - resolutionY) / 2;
-        }
+  },
+  encodeAndUpload (params, res) {
+    var file = config.get('originals_dir') + '/' + params.fileName;
+    fs.exists(file, function (exists) {
+      if (!exists) {
+        log.log('warn', `File ${params.fileName} was requested but did not exist`);
+        return helpers.send404(res, params.fileName);
       }
 
-      var workImageClient = gm(file)
-        .options({imageMagick: true})
-        .autoOrient();
+      // Get the image and resize it
+      res.writeHead(200, {'Content-Type': parsing.supportedFileType(params.fileType)});
 
-      if (resizeFactor) {
-        workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(resolutionX, resolutionY, cropX, cropY);
-      } else {
-        workImageClient = workImageClient.resize(resolutionX, resolutionY);
-      }
-      workImageClient.stream(fileType, function (err, stdout) {
-        var r = stdout.pipe(res);
-        r.on('finish', function () {
-          // This is to close the result while a background job will continue to process
-          log('info', 'Finished sending a converted image');
-          res.end();
+      // These files have already been oriented!
+      correctlyResize(file, params, (resized) => {
+        resized.stream(params.fileType, function (err, stdout) {
+          var r = stdout.pipe(res);
+          r.on('finish', function () {
+            // This is to close the result while a background job will continue to process
+            log.log('info', 'Finished sending a converted image');
+            res.end();
+          });
         });
       });
 
-
-      var workImageAws = gm(file)
-        .options({imageMagick: true})
-        .autoOrient();
-      if (resizeFactor) {
-        workImageAws = workImageAws.resize(cropWidth, cropHeight)
-          .crop(resolutionX, resolutionY, cropX, cropY);
-      } else {
-        workImageAws = workImageAws.resize(resolutionX, resolutionY);
-      }
-
-      workImageAws.toBuffer(fileType, function (err, stream) {
-        if (!err) {
-          // This might mean we have generated the same file while an upload was in progress.
-          // However this is still better than not being able to server the image
-          image.uploadToCache(fileName, fileType, resolutionX, resolutionY, fit, stream);
-        }
+      correctlyResize(file, params, (resized) => {
+        resized.toBuffer(params.fileType, function (err, stream) {
+          if (!err) {
+            // This might mean we have generated the same file while an upload was in progress.
+            // However this is still better than not being able to server the image
+            image.uploadToCache(params, stream);
+          }
+        });
       });
     });
-  });
-};
-image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, fit, content) {
-  // Upload to AWS
-  var key = fileName + '_' + resolutionX + 'x' + resolutionY + '.' + fit + '.' + fileType;
-  console.log('key: ' + key);
-  var upload_params = {
-    Bucket: config.get('aws.bucket'),
-    Key: key,
-    ACL: 'public-read',
-    Body: content,
-    // We let the client cache this for a month
-    Expires: (new Date()).setMonth(new Date().getMonth() + 1) / 1000,
-    ContentType: supportedFileType(fileType),
-    // We let any intermediate server cache this result as well
-    CacheControl: 'public'
-  };
-  S3.putObject(upload_params, function (err) {
-    if (err) {
-      log('error', 'AWS upload error: ' + JSON.stringify(err));
-    } else {
-      log('info', 'Uploading of ' + key + ' went very well');
-      var url = config.get('aws.bucket_url') + '/' + key;
-      insertImage.run([fileName, resolutionX, resolutionY, fit, supportedFileType(fileType), url], function (err) {
+  },
+  uploadToCache(params, content) {
+    // Upload to AWS
+    const key = `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.${params.fileType}`;
+    const upload_params = {
+      Bucket: config.get('aws.bucket'),
+      Key: key,
+      ACL: 'public-read',
+      Body: content,
+      // We let the client cache this for a month
+      Expires: (new Date()).setMonth(new Date().getMonth() + 1) / 1000,
+      ContentType: parsing.supportedFileType(params.fileType),
+      // We let any intermediate server cache this result as well
+      CacheControl: 'public'
+    };
+    S3.putObject(upload_params, function (err) {
+      if (err) {
+        log.log('error', `AWS upload error: ${JSON.stringify(err)}`);
+        return;
+      }
+      log.log('info', `Uploading of ${key} went very well`);
+      const url = `${config.get('aws.bucket_url')}/${key}`;
+      insertImage.run([params.fileName, params.resolutionX, params.resolutionY, params.fit, parsing.supportedFileType(params.fileType), url], function (err) {
         if (err) {
-          console.error(err);
+          log.log('error', err);
         }
       });
+
+    });
+  },
+  upload(req, res) {
+    // Upload the RAW image to disk, stripped of its extension
+    // First check the token
+    const sentToken = req.headers['x-token'];
+    const matches = req.url.match(/^\/(.*)\.([^.]+)$/);
+    log.log('info', `Requested image upload for image_id ${matches[1]} with token ${sentToken}`);
+    if (!parsing.supportedFileType(matches[2])) {
+      return helpers.send415(res, matches[2]);
     }
-  });
-};
-image.upload = function (req, res) {
-  // Upload the RAW image to disk, stripped of its extension
-  // First check the token
-  var sentToken = req.headers['x-token'];
-  var matches = req.url.match(/^\/(.*)\.([^.]+)$/);
-  log('info', "Requested image upload for image_id " + matches[1] + " with token " + sentToken);
-  if (supportedFileType(matches[2])) {
+
     // We support the file type
     token.consume(sentToken, matches[1], function (err) {
-      if (!err && this.changes === 1) {
+        if (err || this.changes !== 1) {
+          return helpers.send403(res);
+        }
         // And we support the filetype
-        log('info', 'Starting to write original file ' + matches[1]);
-        var form = new formidable.IncomingForm();
+        log.log('info', `Starting to write original file ${matches[1]}`);
+        const form = new formidable.IncomingForm();
 
         form.parse(req, function (err, fields, files) {
           if (err) {
-            console.error(err);
-            res.writeHead(500, 'Internal server error');
-            res.end(JSON.stringify(err));
-            return;
+            return helpers.send500(res, err);
           }
-          var temp_path = files.image.path;
-          var destination_path = config.get('originals_dir') + '/' + matches[1];
-          console.log(err, files, destination_path);
+          const temp_path = files.image.path;
+          const destination_path = `${config.get('originals_dir')}/${matches[1]}`;
 
-          gm(temp_path).options({imageMagick: true})
+          im(temp_path)
             .autoOrient()
             .write(destination_path, function (err) {
               if (err) {
-                console.error(err);
-                res.writeHead(500, 'Internal server error');
-                res.end(JSON.stringify(err));
-                return;
+                return helpers.send500(res, err);
               }
               // Yup, we have to re-read the file, since the possible orientation is not taken into account
-              gm(destination_path).options({imageMagick: true})
+              im(destination_path)
                 .size(function (err, value) {
                   var original_height = null;
                   var original_width = null;
@@ -352,79 +199,78 @@ image.upload = function (req, res) {
                     original_width = value.width ? value.width : null;
                   }
 
-                  res.writeHead(200, {'Content-Type': 'application/json'});
-                  res.write(JSON.stringify({
-                      status: 'OK',
-                      id: matches[1],
-                      original_height: original_height,
-                      original_width: original_width
-                    })
-                  );
+                  res.json({
+                    status: 'OK',
+                    id: matches[1],
+                    original_height: original_height,
+                    original_width: original_width
+                  });
                   res.end();
-                  log('info', 'Finished writing original file ' + matches[1]);
+                  log.log('info', `Finished writing original file ${matches[1]}`);
                 });
-
             });
-
         });
-
-
-      } else {
-        log('warn', 'Invalid or expired token used for upload');
-        res.writeHead('403', 'Forbidden');
-        res.end();
       }
-    });
-  } else {
-    res.writeHead(415, 'Image type not supported');
-    res.end();
-  }
-};
-image.getOriginal = function (req, res) {
-  var matches = req.url.match(/^\/(.*)\.([^.]+)$/);
-  log('info', "Requested original image " + matches[1] + " in format " + matches[2]);
-  if (supportedFileType(matches[2])) {
-    var file = config.get('originals_dir') + '/' + matches[1];
-    fs.exists(file, function (exists) {
-      if (!exists) {
-        res.writeHead('404', 'File not found');
-        res.end();
-        log('warn', 'File ' + matches[1] + ' was requested but did not exist');
-        return;
-      }
+    )
+    ;
+  },
+  getOriginal (req, res) {
+    const matches = parsing.getImageParams(req);
+    log.log('info', "Requested original image " + matches.fileName + " in format " + matches.fileType);
+    if (parsing.supportedFileType(matches.fileType)) {
+      const file = `${config.get('originals_dir')}/${matches.fileName}`;
+      fs.exists(file, function (exists) {
+        if (!exists) {
+          return helpers.send404(res, file);
+        }
 
-      // Get the image and resize it
-      res.writeHead(200, {'Content-Type': supportedFileType(matches[2])});
-      fs.readFile(file, function (err, data) {
-        res.end(data);
+        // Get the image and resize it
+        res.writeHead(200, {'Content-Type': parsing.supportedFileType(matches.fileType)});
+        fs.readFile(file, function (err, data) {
+          res.end(data);
+        });
       });
-    });
+    }
   }
 };
 
-function serverStatus(req, res) {
-  res.writeHead(200, 'OK');
-  res.write('OK');
-  res.end();
-  log('info', 'healthcheck performed');
-}
+function correctlyResize(file, params, callback) {
+  im(file).size(function (err, size) {
+    if (err) {
+      return log.log('error', err);
+    }
+    const originalRatio = size.width / size.height;
+    const newRatio = params.resolutionX / params.resolutionY;
 
-function robotsTxt(req, res) {
-  res.writeHead(200, 'OK');
-  if (config.has('allow_indexing') && config.get('allow_indexing')) {
-    res.write("User-agent: *\nAllow: /");
-  } else {
-    res.write("User-agent: *\nDisallow: /");
-  }
-  res.end();
-  log('info', 'robots.txt served');
-}
+    var resizeFactor;
+    var cropX = 0;
+    var cropY = 0;
+    var cropWidth = size.width;
+    var cropHeight = size.height;
 
-function allowCrossDomain(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "accept, content-type");
-  res.header("Access-Control-Allow-Method", "GET");
-  next();
+    if (params.fit === 'crop') {
+      if (originalRatio > newRatio) {
+        resizeFactor = size.height / params.resolutionY;
+        cropWidth = size.width / resizeFactor;
+        cropHeight = params.resolutionY;
+        cropX = (cropWidth - params.resolutionX) / 2;
+      }
+      else {
+        resizeFactor = size.width / params.resolutionX;
+        cropWidth = params.resolutionX;
+        cropHeight = size.height / resizeFactor;
+        cropY = (cropHeight - params.resolutionY) / 2;
+      }
+    }
+
+    var workImageClient = im(file);
+    if (resizeFactor) {
+      workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(params.resolutionX, params.resolutionY, cropX, cropY);
+    } else {
+      workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
+    }
+    callback(workImageClient);
+  });
 }
 
 function startServer() {
@@ -436,9 +282,9 @@ function startServer() {
   var app = express();
   app.use(bodyParser.json());
   app.use(responseTime(logRequest));
-  app.use(allowCrossDomain);
-  app.get('/healthcheck', serverStatus);
-  app.get('/robots.txt', robotsTxt);
+  app.use(helpers.allowCrossDomain);
+  app.get('/healthcheck', helpers.serverStatus);
+  app.get('/robots.txt', helpers.robotsTxt);
   app.get('/*_*_*_*x.*', image.get);
   app.get('/*_*_*.*', image.get);
   app.get('/*.*', image.getOriginal);
@@ -447,20 +293,20 @@ function startServer() {
 
 
   // And listen!
-  var server = app.listen(1337, function () {
+  const port = process.env.PORT || 1337;
+  app.listen(port, function () {
     token.setDb(db);
-    console.log("Server started listening");
+    log.log('info', `Server started listening on port ${port}`);
   });
 }
 
 try {
   fs.statSync(config.get('db_file'));
-  console.log("Using db file: " + config.get('db_file'));
+  log.log('info', "Using db file: " + config.get('db_file'));
   db = new sqlite3.Database(config.get('db_file'));
   startServer();
 } catch (e) {
-  console.log(e);
+  log.log('error', e);
   db = new sqlite3.Database(config.get('db_file'));
-  prepareDb(startServer);
+  database.prepareDb(db, startServer);
 }
-

@@ -8,5 +8,5 @@ branches:
     - master
 
 script:
-  - true
+  - gulp
 

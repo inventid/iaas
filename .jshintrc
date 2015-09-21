@@ -1,0 +1,8 @@
+{
+  "esnext": true,
+  "globals" : {
+    "require": false,
+    "module": false,
+    "process": false
+  }
+}

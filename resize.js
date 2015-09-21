@@ -163,12 +163,12 @@ image.get = function (req, res) {
 
   var valid = true;
   if (params.resolutionX <= 0) {
-     params.resolutionX = 1;
-     valid = false;
+    params.resolutionX = 1;
+    valid = false;
   }
   if (params.resolutionY <= 0) {
-     params.resolutionY = 1;
-     valid = false;
+    params.resolutionY = 1;
+    valid = false;
   }
   if (params.resolutionX > config.get('constraints.max_width')) {
     params.resolutionX = config.get('constraints.max_width');
@@ -220,73 +220,72 @@ image.encodeAndUpload = function (fileName, fileType, resolutionX, resolutionY, 
     // Get the image and resize it
     res.writeHead(200, {'Content-Type': supportedFileType(fileType)});
 
-    gm(file)
-      .size(function (err, size) {
-		if (err) {
-			console.error(err);
-			return;
-		}
-        var originalRatio = size.width / size.height;
-        var newRatio = resolutionX / resolutionY;
+    gm(file).size(function (err, size) {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      var originalRatio = size.width / size.height;
+      var newRatio = resolutionX / resolutionY;
 
-        var cropX = 0;
-        var cropY = 0;
-        var cropWidth = size.width;
-        var cropHeight = size.height;
+      var resizeFactor;
+      var cropX = 0;
+      var cropY = 0;
+      var cropWidth = size.width;
+      var cropHeight = size.height;
 
-        if (fit === 'crop') {
-          if (originalRatio > newRatio) {
-            var resizeFactor = size.height / resolutionY;
-            cropWidth = size.width / resizeFactor;
-            cropHeight = resolutionY;
-            cropX = (cropWidth - resolutionX) / 2;
-          }
-          else {
-            var resizeFactor = size.width / resolutionX;
-            cropWidth = resolutionX;
-            cropHeight = size.height / resizeFactor;
-            cropY = (cropHeight - resolutionY) / 2;
-          }
-
-          this.options({imageMagick : true})
-            .autoOrient()
-            .resize(cropWidth, cropHeight)
-            .crop(resolutionX, resolutionY, cropX, cropY)
-            .stream(fileType, function (err, stdout, stderr) {
-              var r = stdout.pipe(res);
-              r.on('finish', function () {
-                // This is to close the result while a background job will continue to process
-                log('info', 'Finished sending a converted image');
-                res.end();
-              });
-            });
+      if (fit === 'crop') {
+        if (originalRatio > newRatio) {
+          resizeFactor = size.height / resolutionY;
+          cropWidth = size.width / resizeFactor;
+          cropHeight = resolutionY;
+          cropX = (cropWidth - resolutionX) / 2;
         }
         else {
-          this.options({imageMagick : true})
-            .autoOrient()
-            .resize(resolutionX, resolutionY)
-            .stream(fileType, function (err, stdout, stderr) {
-              var r = stdout.pipe(res);
-              r.on('finish', function () {
-                // This is to close the result while a background job will continue to process
-                log('info', 'Finished sending a converted image');
-                res.end();
-              });
-            });
+          resizeFactor = size.width / resolutionX;
+          cropWidth = resolutionX;
+          cropHeight = size.height / resizeFactor;
+          cropY = (cropHeight - resolutionY) / 2;
         }
+      }
+
+      var workImageClient = gm(file)
+        .options({imageMagick: true})
+        .autoOrient();
+
+      if (resizeFactor) {
+        workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(resolutionX, resolutionY, cropX, cropY);
+      } else {
+        workImageClient = workImageClient.resize(resolutionX, resolutionY);
+      }
+      workImageClient.stream(fileType, function (err, stdout, stderr) {
+        var r = stdout.pipe(res);
+        r.on('finish', function () {
+          // This is to close the result while a background job will continue to process
+          log('info', 'Finished sending a converted image');
+          res.end();
+        });
       });
 
-    gm(file)
-      .options({imageMagick: true})
-      .autoOrient()
-      .resize(resolutionX, resolutionY)
-      .toBuffer(fileType, function (err, stream) {
+
+      var workImageAws = gm(file)
+        .options({imageMagick: true})
+        .autoOrient();
+      if (resizeFactor) {
+        workImageAws = workImageAws.resize(cropWidth, cropHeight)
+          .crop(resolutionX, resolutionY, cropX, cropY);
+      } else {
+        workImageAws = workImageAws.resize(resolutionX, resolutionY);
+      }
+
+      workImageAws.toBuffer(fileType, function (err, stream) {
         if (!err) {
           // This might mean we have generated the same file while an upload was in progress.
           // However this is still better than not being able to server the image
           image.uploadToCache(fileName, fileType, resolutionX, resolutionY, fit, stream);
         }
       });
+    });
   });
 };
 image.uploadToCache = function (fileName, fileType, resolutionX, resolutionY, fit, content) {

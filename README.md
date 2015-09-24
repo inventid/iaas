@@ -62,10 +62,10 @@ Then, specify your own values.
 
 In case you like to use it in production, call the script like this:
 
-````bash
+```bash
 export NODE_ENV=production
 node rewrite.js
-````
+```
 
 It will then additionally load the `production.json` file.
 
@@ -88,4 +88,16 @@ Simply install Vagrant, run `vagrant up`, `vagrant ssh`, and `cd /vagrant`.
 Here you can run the server using `node resize.js`.
 
 If you have additions for the code, please [fork the repo](https://github.com/inventid/live-image-resize/fork) and open a Pull Request.
+
+## Building and extending
+
+### Building the Docker image
+
+First build the `dist` folder, by running `gulp`.
+Then build the docker image.
+Don't forget to commit the `dist` folder as well.
+
+### Running it locally
+
+Locally you can run the ES6 stuff using `babel-node resize.js`
 

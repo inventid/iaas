@@ -22,7 +22,7 @@ ADD package.json /opt/live-image-resize/package.json
 RUN cd /opt/live-image-resize && npm install
 
 # Add the application
-ADD dist/*.js /opt/live-image-resize/*.js
+ADD dist/*.js /opt/live-image-resize/
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize

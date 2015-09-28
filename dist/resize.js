@@ -75,9 +75,23 @@ var image = {
     if (!valid) {
       return helpers.send307DueTooLarge(res, params);
     }
+    if (req.method === 'HEAD') {
+      image.canServeFile(params, function (canServe) {
+        if (canServe) {
+          res.status(200).end();
+        } else {
+          res.status(404).end();
+        }
+      });
+      return;
+    }
     log.log('info', 'Requesting file ' + params.fileName + ' in ' + params.fileType + ' format in a ' + params.resolutionX + 'x' + params.resolutionY + 'px resolution');
 
     image.checkCacheOrCreate(params, res);
+  },
+  canServeFile: function canServeFile(params, cb) {
+    var file = config.get('originals_dir') + '/' + params.fileName;
+    fs.exists(file, cb);
   },
   checkCacheOrCreate: function checkCacheOrCreate(params, res) {
     // Check if it exists in the cache

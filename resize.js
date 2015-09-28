@@ -77,9 +77,25 @@ const image = {
     if (!valid) {
       return helpers.send307DueTooLarge(res, params);
     }
+    //HEAD requests won't be redirected automatically, so instead we'll always either return a 200
+    //or a 404, indicating if the corresponding GET method will result in an image.
+    if (req.method === 'HEAD') {
+      image.canServeFile(params, (canServe) => {
+        if (canServe) {
+          res.status(200).end();
+        } else {
+          res.status(404).end();
+        }
+      });
+      return;
+    }
     log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`);
 
     image.checkCacheOrCreate(params, res);
+  },
+  canServeFile(params, cb) {
+      var file = config.get('originals_dir') + '/' + params.fileName;
+      fs.exists(file, cb);
   },
   checkCacheOrCreate(params, res) {
     // Check if it exists in the cache

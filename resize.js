@@ -285,6 +285,10 @@ function correctlyResize(file, params, callback) {
     } else {
       workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
     }
+    //Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
+    if (params.fileType === 'jpg') {
+      workImageClient = workImageClient.interlace('Line');
+    }
     callback(workImageClient);
   });
 }

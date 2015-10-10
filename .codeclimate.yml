@@ -51,4 +51,5 @@ ratings:
 
 exclude_paths:
 - dist/**/*
+- Vagrantfile
 

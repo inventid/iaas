@@ -1,0 +1,10 @@
+{
+    "ecmaFeatures": {
+        "blockBindings": true,
+        "forOf": true,
+        "jsx": true,
+        "objectLiteralShorthandMethods": true,
+        "arrowFunctions": true,
+        "templateStrings": true
+    }
+}

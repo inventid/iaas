@@ -35,6 +35,10 @@ engines:
 
 # Note: If the ratings key is not specified, this will result in a 0.0 GPA on your dashboard.
 
+ratings:
+  paths:
+  - "**.js"
+
 # ratings:
 #   paths:
 #   - app/**

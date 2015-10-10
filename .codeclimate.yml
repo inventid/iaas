@@ -37,7 +37,7 @@ engines:
 
 ratings:
   paths:
-  - **.js
+  - "**.js"
 
 # ratings:
 #   paths:

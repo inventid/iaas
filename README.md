@@ -1,5 +1,8 @@
 # Live Image Resize
 
+[![Code Climate](https://codeclimate.com/github/inventid/live-image-resize/badges/gpa.svg)](https://codeclimate.com/github/inventid/live-image-resize)
+[![Dependency Status](https://gemnasium.com/inventid/live-image-resize.svg)](https://gemnasium.com/inventid/live-image-resize)
+
 [![Docker downloads](https://img.shields.io/docker/pulls/rogierslag/live-image-resize.svg)](https://registry.hub.docker.com/u/rogierslag/live-image-resize/)
 [![GitHub license](https://img.shields.io/github/license/inventid/live-image-resize.svg)](https://github.com/inventid/live-image-resize/blob/master/LICENSE)
 

@@ -75,6 +75,8 @@ var image = {
     if (!valid) {
       return helpers.send307DueTooLarge(res, params);
     }
+    //HEAD requests won't be redirected automatically, so instead we'll always either return a 200
+    //or a 404, indicating if the corresponding GET method will result in an image.
     if (req.method === 'HEAD') {
       image.canServeFile(params, function (canServe) {
         if (canServe) {
@@ -114,7 +116,11 @@ var image = {
       }
 
       // Get the image and resize it
-      res.writeHead(200, { 'Content-Type': parsing.supportedFileType(params.fileType) });
+      res.writeHead(200, {
+        'Content-Type': parsing.supportedFileType(params.fileType),
+        'Expires': helpers.farFutureDate(),
+        'Cache-Control': 'public'
+      });
 
       // These files have already been oriented!
       correctlyResize(file, params, function (resized) {
@@ -141,14 +147,14 @@ var image = {
   },
   uploadToCache: function uploadToCache(params, content) {
     // Upload to AWS
-    var key = params.fileName + '_' + params.resolutionX + 'x' + params.resolutionY + '.' + params.fit + '.' + params.fileType;
+    var key = getKeyFromParams(params);
+    // AWS sets the etag as MD5 of the file already
     var upload_params = {
       Bucket: config.get('aws.bucket'),
       Key: key,
       ACL: 'public-read',
       Body: content,
-      // We let the client cache this for a month
-      Expires: new Date().setMonth(new Date().getMonth() + 1) / 1000,
+      Expires: helpers.farFutureDate(),
       ContentType: parsing.supportedFileType(params.fileType),
       // We let any intermediate server cache this result as well
       CacheControl: 'public'
@@ -230,9 +236,13 @@ var image = {
           if (!exists) {
             return helpers.send404(res, file);
           }
-
-          // Get the image and resize it
-          res.writeHead(200, { 'Content-Type': parsing.supportedFileType(matches.fileType) });
+          var headers = {
+            'Content-Type': parsing.supportedFileType(matches.fileType),
+            'Cache-Control': 'public',
+            'Etag': matches.fileName + '_' + matches.fileType,
+            'Expires': helpers.farFutureDate()
+          };
+          res.writeHead(200, headers);
           fs.readFile(file, function (err, data) {
             res.end(data);
           });
@@ -284,6 +294,10 @@ function correctlyResize(file, params, callback) {
   });
 }
 
+function getKeyFromParams(params) {
+  return params.fileName + '_' + params.resolutionX + 'x' + params.resolutionY + '.' + params.fit + '.' + params.fileType;
+}
+
 function startServer() {
   // Set the queries
   insertImage = db.prepare("INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)");
@@ -296,6 +310,9 @@ function startServer() {
   app.use(helpers.allowCrossDomain);
   app.get('/healthcheck', helpers.serverStatus);
   app.get('/robots.txt', helpers.robotsTxt);
+  app.get('/favicon.ico', function (req, res) {
+    helpers.send404(res, 'favicon.ico');
+  });
   app.get('/*_*_*_*x.*', image.get);
   app.get('/*_*_*.*', image.get);
   app.get('/*.*', image.getOriginal);

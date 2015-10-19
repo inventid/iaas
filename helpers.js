@@ -45,7 +45,7 @@ module.exports = {
   },
   send307DueToCache(res, params, url) {
     log.log('info', `cache hit for ${params.fileName}.${params.fileType} (${params.resolutionX}x${params.resolutionY}px, fit: ${params.fit})`);
-    res.writeHead(307, {'Location': url, 'Cache-Control': 'public'});
+    res.writeHead(307, {'Location': url, 'Cache-Control': 'public', 'Expires': module.exports.farFutureDate()});
     res.end();
   },
   send403(res) {
@@ -57,5 +57,10 @@ module.exports = {
     log.log('error',error);
     res.writeHead(500, 'Internal server error');
     res.end();
+  },
+  farFutureDate() {
+    let cacheDate = new Date;
+    cacheDate.setFullYear(cacheDate.getFullYear( ) + 10);
+    return cacheDate;
   }
 };

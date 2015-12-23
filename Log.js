@@ -1,7 +1,7 @@
 // Central logging. console.log can be replaced by writing to a logfile for example
-module.exports = {
+export default {
   log: function (level, message) {
-    var obj = {
+    const obj = {
       datetime: Date.now(),
       severity: level,
       message: message

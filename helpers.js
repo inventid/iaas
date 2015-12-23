@@ -1,13 +1,10 @@
-"use strict";
+import config from 'config';
 
-const log = require('./log.js');
-const config = require('config');
+import log from './Log';
 
-module.exports = {
+const Helpers =  {
   serverStatus(req, res) {
-    res.writeHead(200, 'OK');
-    res.write('OK');
-    res.end();
+    res.writeHead(200, 'OK').write('OK').end();
     log.log('info', 'healthcheck performed');
   },
   robotsTxt(req, res) {
@@ -45,7 +42,7 @@ module.exports = {
   },
   send307DueToCache(res, params, url) {
     log.log('info', `cache hit for ${params.fileName}.${params.fileType} (${params.resolutionX}x${params.resolutionY}px, fit: ${params.fit})`);
-    res.writeHead(307, {'Location': url, 'Cache-Control': 'public', 'Expires': module.exports.farFutureDate()});
+    res.writeHead(307, {'Location': url, 'Cache-Control': 'public', 'Expires': Helpers.farFutureDate()});
     res.end();
   },
   send403(res) {
@@ -59,8 +56,10 @@ module.exports = {
     res.end();
   },
   farFutureDate() {
-    let cacheDate = new Date;
+    const cacheDate = new Date;
     cacheDate.setFullYear(cacheDate.getFullYear( ) + 10);
     return cacheDate;
   }
 };
+
+export default Helpers;

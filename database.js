@@ -1,8 +1,6 @@
-"use strict";
+import log from './Log';
 
-const log = require('./log.js');
-
-module.exports = {
+export default {
   prepareDb(db, callback) {
     db.serialize(() => {
       log.log('info', "Creating the db schema");

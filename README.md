@@ -38,6 +38,7 @@ You can simply request an image using a plain GET request to `http://localhost:2
 This will trigger the server to search for the image with id `example`, and serve it in a PNG format in a `100x100` resolution.
 Depending on earlier requests, the image might be on the CDN (causing a redirect) or be transcoded on the fly and uploaded later.
 For Retina (or HiDpi) displays, the postfix `_2x` will appropriately resize the image to that size (or perform a redirect).
+Additional options can be send through the query parameter, such as `?fit=crop` to crop the image to the bounding box you request.
 
 ### Uploading images
 
@@ -66,8 +67,7 @@ Then, specify your own values.
 In case you like to use it in production, call the script like this:
 
 ```bash
-export NODE_ENV=production
-node rewrite.js
+NODE_ENV=production node index.js
 ```
 
 It will then additionally load the `production.json` file.
@@ -79,28 +79,13 @@ On first run, simple first call `node prepare.js` to create the database.
 
 ### Originals
 
-For quick saving, the original files are kept in `images` subdirectory (retrieving from AWS S3 is too slow).
+For quick saving, the original files are kept in `images` subdirectory (retrieving from AWS S3 to determine whether an image exists is too slow).
 Be sure to keep this data and backup it.
 You can also use the config to let it point to another directory.
 In that case, ensure the user can write there!
 
 ## Contributing
 
-We have created a [Vagrant](http://vagrantup.com) image available which is ready to use for development.
-Simply install Vagrant, run `vagrant up`, `vagrant ssh`, and `cd /vagrant`.
-Here you can run the server using `node resize.js`.
+You can use the `Dockerfile` to quickly stage stuff locally (on OSX use `docker-machine`).
 
 If you have additions for the code, please [fork the repo](https://github.com/inventid/live-image-resize/fork) and open a Pull Request.
-
-## Building and extending
-
-### Building the Docker image
-
-First build the `dist` folder, by running `gulp`.
-Then build the docker image.
-Don't forget to commit the `dist` folder as well.
-
-### Running it locally
-
-Locally you can run the ES6 stuff using `babel-node resize.js`
-

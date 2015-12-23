@@ -13,3 +13,6 @@ cache.db
 config/default.json
 
 images/
+
+// Ignore the dist folder
+dist/

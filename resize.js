@@ -315,6 +315,9 @@ function startServer() {
   app.use(bodyParser.json());
   app.use(responseTime(logRequest));
   app.use(helpers.allowCrossDomain);
+  app.get('/', function (req, res) {
+    helpers.send404(res, '');
+  });
   app.get('/healthcheck', helpers.serverStatus);
   app.get('/robots.txt', helpers.robotsTxt);
   app.get('/favicon.ico', function (req, res) {

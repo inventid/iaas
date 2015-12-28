@@ -50,5 +50,4 @@ ratings:
 # exclude_paths key.
 
 exclude_paths:
-- Vagrantfile
 

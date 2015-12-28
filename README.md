@@ -34,7 +34,7 @@ Logging takes place in a JSON Logstash enabled format, so it's easy to get into 
 
 ### Requesting an image
 
-You can simply request an image using a plain GET request to `http://localhost:2337/example_100_100.png`.
+You can simply request an image using a plain GET request to `http://localhost:1337/example_100_100.png`.
 This will trigger the server to search for the image with id `example`, and serve it in a PNG format in a `100x100` resolution.
 Depending on earlier requests, the image might be on the CDN (causing a redirect) or be transcoded on the fly and uploaded later.
 For Retina (or HiDpi) displays, the postfix `_2x` will appropriately resize the image to that size (or perform a redirect).
@@ -50,7 +50,7 @@ The client can then directly use this token to upload a file.
 
 An example command in curl is `curl -vvv -XPOST http://localhost:1337/token -d '{"id": "test"}' -H "Content-Type: application/json"`
 
-The client uses another `POST` request to `http://localhost:2337/someimage.jpg`, this will cause the `someimage` key to be used.
+The client uses another `POST` request to `http://localhost:1337/someimage.jpg`, this will cause the `someimage` key to be used.
 A token also should be send along, this is done in the HTTP-Headers in the `X-Token` parameter.
 The token will automatically expire once used.
 The token is only valid for one upload attempt and one id.

@@ -13,8 +13,11 @@ const Token = {
     deleteOldTokens = database.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");
 
   },
+  // This method is madness, but node-sqlite3 binds the this, so #noLambda
   consume(token, id, callback) {
-    consumeToken.run([token, id], callback);
+    consumeToken.run([token, id], function(err) {
+      callback(err, this);
+    });
   },
   create(req, res) {
     // Here we create a token which is valid for one single upload

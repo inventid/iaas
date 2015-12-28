@@ -205,9 +205,8 @@ const Image = {
     }
 
     // We support the file type
-    token.consume(sentToken, matches[1], function (err) {
-        // OK #noKidding: Node-sqlite3 bind the `this`, so ES6 syntax is not possible here
-        if (err || this.changes !== 1) {
+    token.consume(sentToken, matches[1], (err, dbResult) => {
+        if (err || dbResult.changes !== 1) {
           return helpers.send403(res);
         }
         // And we support the filetype
@@ -359,11 +358,13 @@ function startServer() {
 
 try {
   fs.statSync(config.get('db_file'));
-  log.log('info', "Using db file: " + config.get('db_file'));
+  // If we get here the database existed
+  log.log('info', "Using existing db file: " + config.get('db_file'));
   db = new sqlite3.Database(config.get('db_file'));
   startServer();
 } catch (e) {
-  log.log('error', e);
+  // Database did not exist so we just create it
+  log.log('info', "Creating db file: " + config.get('db_file'));
   db = new sqlite3.Database(config.get('db_file'));
   database.prepareDb(db, startServer);
 }

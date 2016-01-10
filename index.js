@@ -263,7 +263,7 @@ const Image = {
         log.log('warn', 'Image ${matches.fileName} is not available locally');
         return helpers.send404(res, file);
       }
-      let headers = {
+      const headers = {
         'Content-Type': parsing.supportedFileType(matches.fileType),
         'Cache-Control': 'public',
         'Etag': `${matches.fileName}_${matches.fileType}`,

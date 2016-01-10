@@ -25,7 +25,6 @@ const Token = {
     const newToken = uuid.v4();
     if (!req.body.id) {
       res.writeHead(400, 'Bad request');
-      console.log(req.body);
       return res.end();
     }
     // Ensure the id wasnt requested or used previously

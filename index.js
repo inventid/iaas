@@ -1,24 +1,30 @@
-"use strict";
+import express from 'express';
+import gm from 'gm';
+import formidable from 'formidable';
+import fs from 'fs-extra';
+import config from 'config';
+import AWS from 'aws-sdk';
+import sqlite3dep from 'sqlite3';
+import responseTime from 'response-time';
+import bodyParser from 'body-parser';
 
-const express = require('express');
-const gm = require('gm');
 const im = gm.subClass({imageMagick: true});
-const formidable = require('formidable');
-const fs = require('fs-extra');
-const config = require('config');
-const AWS = require('aws-sdk');
-const sqlite3 = require('sqlite3').verbose();
-const responseTime = require('response-time');
-const bodyParser = require('body-parser');
-const token = require('./token.js');
-const log = require('./log.js');
-const helpers = require('./helpers.js');
-const database = require('./database.js');
-const parsing = require('./url-parsing.js');
-var db;
+const sqlite3 = sqlite3dep.verbose();
 
-// The AWS config needs to be set before this objectis created
-AWS.config.update({accessKeyId: config.get('aws.access_key'), secretAccessKey: config.get('aws.secret_key'), region: config.get('aws.region')});
+import token from './Token';
+import log from './Log';
+import helpers from'./Helpers';
+import database from'./Database';
+import parsing from './UrlParsing';
+
+let db;
+
+// The AWS config needs to be set before this object is created
+AWS.config.update({
+  accessKeyId: config.get('aws.access_key'),
+  secretAccessKey: config.get('aws.secret_key'),
+  region: config.get('aws.region')
+});
 const S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
@@ -27,7 +33,7 @@ var selectImage;
 
 function logRequest(req, res, time) {
   const remoteIp = req.headers['x-forwarded-for'] || req.ip;
-  var obj = {
+  const obj = {
     datetime: Date.now(),
     method: req.method,
     url: req.url,
@@ -41,16 +47,18 @@ function logRequest(req, res, time) {
     } else if (res.statusCode === 307) {
       obj.cache_hit = true;
     }
-    var params = parsing.getImageParams(req);
+    const params = parsing.getImageParams(req);
     for (var param in params) {
-      obj[param] = params[param];
+      if (params.hasOwnProperty(param)) {
+        obj[param] = params[param];
+      }
     }
   }
   log.log('debug', JSON.stringify(obj));
 }
 
 
-const image = {
+const Image = {
   get(req, res)
   {
     if (!parsing.isValidRequest(req.url)) {
@@ -64,7 +72,7 @@ const image = {
       return helpers.send415(res, params.fileType);
     }
 
-    var valid = true;
+    let valid = true;
     if (params.resolutionX > config.get('constraints.max_width')) {
       params.resolutionX = config.get('constraints.max_width');
       valid = false;
@@ -80,7 +88,7 @@ const image = {
     //HEAD requests won't be redirected automatically, so instead we'll always either return a 200
     //or a 404, indicating if the corresponding GET method will result in an image.
     if (req.method === 'HEAD') {
-      image.canServeFile(params, (canServe) => {
+      Image.canServeFile(params, (canServe) => {
         if (canServe) {
           res.status(200).end();
         } else {
@@ -91,28 +99,39 @@ const image = {
     }
     log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`);
 
-    image.checkCacheOrCreate(params, res);
+    Image.checkCacheOrCreate(params, res);
   },
   canServeFile(params, cb) {
-    var file = config.get('originals_dir') + '/' + params.fileName;
-    fs.exists(file, cb);
+    const file = `${config.get('originals_dir')}/${params.fileName}`;
+    fs.access(file, fs.R_OK, (err) => {
+      if (!err) {
+        cb(true);
+      } else {
+        cb(false);
+      }
+    });
   },
   checkCacheOrCreate(params, res) {
     // Check if it exists in the cache
-    selectImage.get([params.fileName, params.resolutionX, params.resolutionY, params.fit, parsing.supportedFileType(params.fileType)], function (err, data) {
+    selectImage.get([params.fileName,
+      params.resolutionX,
+      params.resolutionY,
+      params.fit,
+      parsing.supportedFileType(params.fileType)
+    ], (err, data) => {
       if (!err && data) {
         // It is in the cache, so redirect to there
         return helpers.send307DueToCache(res, params, data.url);
       }
 
       // It does not exist in the cache, so generate and upload
-      image.encodeAndUpload(params, res);
+      Image.encodeAndUpload(params, res);
     });
   },
   encodeAndUpload (params, res) {
-    var file = config.get('originals_dir') + '/' + params.fileName;
-    fs.exists(file, function (exists) {
-      if (!exists) {
+    const file = `${config.get('originals_dir')}/${params.fileName}`;
+    fs.access(file, (err) => {
+      if (err) {
         log.log('warn', `File ${params.fileName} was requested but did not exist`);
         return helpers.send404(res, params.fileName);
       }
@@ -126,9 +145,9 @@ const image = {
 
       // These files have already been oriented!
       correctlyResize(file, params, (resized) => {
-        resized.stream(params.fileType, function (err, stdout) {
-          var r = stdout.pipe(res);
-          r.on('finish', function () {
+        resized.stream(params.fileType, (err, stdout) => {
+          const r = stdout.pipe(res);
+          r.on('finish', () => {
             // This is to close the result while a background job will continue to process
             log.log('info', 'Finished sending a converted image');
             res.end();
@@ -137,11 +156,11 @@ const image = {
       });
 
       correctlyResize(file, params, (resized) => {
-        resized.toBuffer(params.fileType, function (err, stream) {
+        resized.toBuffer(params.fileType, (err, stream) => {
           if (!err) {
             // This might mean we have generated the same file while an upload was in progress.
             // However this is still better than not being able to server the image
-            image.uploadToCache(params, stream);
+            Image.uploadToCache(params, stream);
           }
         });
       });
@@ -161,14 +180,19 @@ const image = {
       // We let any intermediate server cache this result as well
       CacheControl: 'public'
     };
-    S3.putObject(upload_params, function (err) {
+    S3.putObject(upload_params, (err) => {
       if (err) {
         log.log('error', `AWS upload error: ${JSON.stringify(err)}`);
         return;
       }
       log.log('info', `Uploading of ${key} went very well`);
       const url = `${config.get('aws.bucket_url')}/${key}`;
-      insertImage.run([params.fileName, params.resolutionX, params.resolutionY, params.fit, parsing.supportedFileType(params.fileType), url], function (err) {
+      insertImage.run([params.fileName,
+        params.resolutionX,
+        params.resolutionY,
+        params.fit,
+        parsing.supportedFileType(params.fileType), url
+      ], (err) => {
         if (err) {
           log.log('error', err);
         }
@@ -187,15 +211,15 @@ const image = {
     }
 
     // We support the file type
-    token.consume(sentToken, matches[1], function (err) {
-        if (err || this.changes !== 1) {
+    token.consume(sentToken, matches[1], (err, dbResult) => {
+        if (err || dbResult.changes !== 1) {
           return helpers.send403(res);
         }
         // And we support the filetype
         log.log('info', `Starting to write original file ${matches[1]}`);
         const form = new formidable.IncomingForm();
 
-        form.parse(req, function (err, fields, files) {
+        form.parse(req, (err, fields, files) => {
           if (err) {
             return helpers.send500(res, err);
           }
@@ -204,15 +228,15 @@ const image = {
 
           im(temp_path)
             .autoOrient()
-            .write(destination_path, function (err) {
+            .write(destination_path, (err) => {
               if (err) {
                 return helpers.send500(res, err);
               }
               // Yup, we have to re-read the file, since the possible orientation is not taken into account
               im(destination_path)
-                .size(function (err, value) {
-                  var original_height = null;
-                  var original_width = null;
+                .size((err, value) => {
+                  let original_height = null;
+                  let original_width = null;
                   if (!err) {
                     // This is an intentional swallow of errors, since it does not affect the situation too much
                     original_height = value.height ? value.height : null;
@@ -224,8 +248,7 @@ const image = {
                     id: matches[1],
                     original_height: original_height,
                     original_width: original_width
-                  });
-                  res.end();
+                  }).end();
                   log.log('info', `Finished writing original file ${matches[1]}`);
                 });
             });
@@ -236,41 +259,43 @@ const image = {
   },
   getOriginal (req, res) {
     const matches = parsing.getImageParams(req);
-    log.log('info', "Requested original image " + matches.fileName + " in format " + matches.fileType);
-    if (parsing.supportedFileType(matches.fileType)) {
-      const file = `${config.get('originals_dir')}/${matches.fileName}`;
-      fs.exists(file, function (exists) {
-        if (!exists) {
-          return helpers.send404(res, file);
-        }
-        let headers = {
-          'Content-Type': parsing.supportedFileType(matches.fileType),
-          'Cache-Control': 'public',
-          'Etag': `${matches.fileName}_${matches.fileType}`,
-          'Expires': helpers.farFutureDate()
-        };
-        res.writeHead(200, headers);
-        fs.readFile(file, function (err, data) {
-          res.end(data);
-        });
-      });
+    log.log('info', `Requested original image ${matches.fileName} in format ${matches.fileType}`);
+    if (!parsing.supportedFileType(matches.fileType)) {
+      return helpers.set404(res, req.url);
     }
+    const file = `${config.get('originals_dir')}/${matches.fileName}`;
+    fs.access(file, fs.R_OK, (err) => {
+      if (err) {
+        log.log('warn', 'Image ${matches.fileName} is not available locally');
+        return helpers.send404(res, file);
+      }
+      const headers = {
+        'Content-Type': parsing.supportedFileType(matches.fileType),
+        'Cache-Control': 'public',
+        'Etag': `${matches.fileName}_${matches.fileType}`,
+        'Expires': helpers.farFutureDate()
+      };
+      res.writeHead(200, headers);
+      fs.readFile(file, (err, data) => {
+        res.end(data);
+      });
+    });
   }
 };
 
 function correctlyResize(file, params, callback) {
-  im(file).size(function (err, size) {
+  im(file).size((err, size) => {
     if (err) {
       return log.log('error', err);
     }
     const originalRatio = size.width / size.height;
     const newRatio = params.resolutionX / params.resolutionY;
 
-    var resizeFactor;
-    var cropX = 0;
-    var cropY = 0;
-    var cropWidth = size.width;
-    var cropHeight = size.height;
+    let resizeFactor;
+    let cropX = 0;
+    let cropY = 0;
+    let cropWidth = size.width;
+    let cropHeight = size.height;
 
     if (params.fit === 'crop') {
       if (originalRatio > newRatio) {
@@ -287,7 +312,7 @@ function correctlyResize(file, params, callback) {
       }
     }
 
-    var workImageClient = im(file);
+    let workImageClient = im(file);
     if (resizeFactor) {
       workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(params.resolutionX, params.resolutionY, cropX, cropY);
     } else {
@@ -311,28 +336,27 @@ function startServer() {
   selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?");
 
   // Create the server
-  var app = express();
+  const app = express();
   app.use(bodyParser.json());
   app.use(responseTime(logRequest));
   app.use(helpers.allowCrossDomain);
-  app.get('/', function (req, res) {
+  app.get('/', (req, res) => {
     helpers.send404(res, '');
   });
   app.get('/healthcheck', helpers.serverStatus);
   app.get('/robots.txt', helpers.robotsTxt);
-  app.get('/favicon.ico', function (req, res) {
+  app.get('/favicon.ico', (req, res) => {
     helpers.send404(res, 'favicon.ico');
   });
-  app.get('/*_*_*_*x.*', image.get);
-  app.get('/*_*_*.*', image.get);
-  app.get('/*.*', image.getOriginal);
+  app.get('/*_*_*_*x.*', Image.get);
+  app.get('/*_*_*.*', Image.get);
+  app.get('/*.*', Image.getOriginal);
   app.post('/token', token.create);
-  app.post('/*', image.upload);
-
+  app.post('/*', Image.upload);
 
   // And listen!
   const port = process.env.PORT || 1337;
-  app.listen(port, function () {
+  app.listen(port, () => {
     token.setDb(db);
     log.log('info', `Server started listening on port ${port}`);
   });
@@ -340,11 +364,13 @@ function startServer() {
 
 try {
   fs.statSync(config.get('db_file'));
-  log.log('info', "Using db file: " + config.get('db_file'));
+  // If we get here the database existed
+  log.log('info', "Using existing db file: " + config.get('db_file'));
   db = new sqlite3.Database(config.get('db_file'));
   startServer();
 } catch (e) {
-  log.log('error', e);
+  // Database did not exist so we just create it
+  log.log('info', "Creating db file: " + config.get('db_file'));
   db = new sqlite3.Database(config.get('db_file'));
   database.prepareDb(db, startServer);
 }

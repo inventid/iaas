@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:5.3
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     apt-get clean
 
-RUN npm install -g pm2
+RUN npm install -g pm2 babel-cli babel-preset-es2015
 
 # Export the database, originals dir and the config dir
 RUN mkdir /opt/live-image-resize
@@ -15,16 +15,19 @@ RUN mkdir /opt/images
 RUN mkdir /opt/db
 RUN chmod 0777 /opt/db
 VOLUME ["/opt/db", "/opt/images", "/opt/live-image-resize/config"]
+
 EXPOSE 1337
 
 # Add the dependencies
+ADD .babelrc /opt/live-image-resize/
 ADD package.json /opt/live-image-resize/package.json
 RUN cd /opt/live-image-resize && npm install
 
 # Add the application
-ADD dist/*.js /opt/live-image-resize/
+ADD *.js /opt/live-image-resize/src/
+RUN cd /opt/live-image-resize/src && babel -d ../ *.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
-CMD ["/usr/local/bin/pm2", "start", "resize.js", "--no-daemon", "--instances=1"]
+CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=1"]
 

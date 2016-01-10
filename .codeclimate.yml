@@ -50,6 +50,4 @@ ratings:
 # exclude_paths key.
 
 exclude_paths:
-- dist/**/*
-- Vagrantfile
 

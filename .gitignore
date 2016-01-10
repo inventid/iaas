@@ -1,4 +1,3 @@
-.vagrant/
 node_modules/
 
 // Ignore any images
@@ -13,3 +12,6 @@ cache.db
 config/default.json
 
 images/
+
+// Ignore the dist folder
+dist/

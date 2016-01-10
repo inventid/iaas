@@ -103,7 +103,13 @@ const Image = {
   },
   canServeFile(params, cb) {
     const file = `${config.get('originals_dir')}/${params.fileName}`;
-    fs.exists(file, cb);
+    fs.access(file, fs.R_OK, (err) => {
+      if (!err) {
+        cb(true);
+      } else {
+        cb(false);
+      }
+    });
   },
   checkCacheOrCreate(params, res) {
     // Check if it exists in the cache
@@ -124,8 +130,8 @@ const Image = {
   },
   encodeAndUpload (params, res) {
     const file = `${config.get('originals_dir')}/${params.fileName}`;
-    fs.exists(file, (exists) => {
-      if (!exists) {
+    fs.access(file, (err) => {
+      if (err) {
         log.log('warn', `File ${params.fileName} was requested but did not exist`);
         return helpers.send404(res, params.fileName);
       }
@@ -258,8 +264,8 @@ const Image = {
       return helpers.set404(res, req.url);
     }
     const file = `${config.get('originals_dir')}/${matches.fileName}`;
-    fs.exists(file, (exists) => {
-      if (!exists) {
+    fs.access(file, fs.R_OK, (err) => {
+      if (err) {
         log.log('warn', 'Image ${matches.fileName} is not available locally');
         return helpers.send404(res, file);
       }

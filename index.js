@@ -261,7 +261,7 @@ const Image = {
     const matches = parsing.getImageParams(req);
     log.log('info', `Requested original image ${matches.fileName} in format ${matches.fileType}`);
     if (!parsing.supportedFileType(matches.fileType)) {
-      return helpers.set404(res, req.url);
+      return helpers.send404(res, req.url);
     }
     const file = `${config.get('originals_dir')}/${matches.fileName}`;
     fs.access(file, fs.R_OK, (err) => {

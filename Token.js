@@ -8,14 +8,15 @@ let deleteOldTokens;
 
 const Token = {
   setDb(database) {
+    /*eslint-disable */
     insertToken = database.prepare("INSERT INTO tokens (id, image_id, valid_until, used) VALUES (?,?,datetime('now','+15 minute'), 0)");
     consumeToken = database.prepare("UPDATE tokens SET used=1 WHERE id=? AND image_id=? AND valid_until>= datetime('now') AND used=0");
     deleteOldTokens = database.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");
-
+    /*eslint-enable */
   },
   // This method is madness, but node-sqlite3 binds the this, so #noLambda
   consume(token, id, callback) {
-    consumeToken.run([token, id], function(err) {
+    consumeToken.run([token, id], function (err) {
       callback(err, this);
     });
   },

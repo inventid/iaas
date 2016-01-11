@@ -6,10 +6,6 @@ notifications:
 install:
   - npm install eslint -g
 
-branches:
-  only:
-    - master
-
 script:
   - eslint .
 

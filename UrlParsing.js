@@ -1,54 +1,3 @@
-const UrlParsing = {
-  isGetRequest(req) {
-    return req.url !== '/healthcheck' && req.method === 'GET';
-  },
-  supportedFileType(fileType) {
-    switch (fileType) {
-      case 'jpg':
-      case 'jpeg':
-      case 'jfif':
-      case 'jpe':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      default:
-        return null;
-    }
-  },
-  isValidRequest(url) {
-    return splitResizableUrl(url) !== null || splitOriginalUrl(url) !== null;
-  },
-  getImageParams(req) {
-    const matches = splitResizableUrl(req.url);
-    if (matches !== null) {
-      const res = {
-        fileName: matches[1],
-        resolutionX: parseInt(matches[2], 10),
-        resolutionY: parseInt(matches[3], 10),
-        fileType: matches[6].toLowerCase(),
-        fit: 'clip'
-      };
-
-      if (matches[8] && ["clip", "crop"].indexOf(matches[8].toLowerCase()) > -1) {
-        res.fit = matches[8].toLowerCase();
-      }
-
-      if (matches[5] !== undefined) {
-        res.resolutionX *= parseInt(matches[5], 10);
-        res.resolutionY *= parseInt(matches[5], 10);
-      }
-
-      return res;
-    } else {
-      const matchesOriginal = splitOriginalUrl(req.url);
-      return {
-        fileName: matchesOriginal[1],
-        fileType: matchesOriginal[2].toLowerCase()
-      };
-    }
-  }
-};
-
 /**
  * This will return an array with matches, or null if no match was found
  *
@@ -80,5 +29,56 @@ function splitResizableUrl(url) {
 function splitOriginalUrl(url) {
   return url.match(/^\/(.*)\.([^.]+)$/);
 }
+
+const UrlParsing = {
+  isGetRequest(req) {
+    return req.url !== '/healthcheck' && req.method === 'GET';
+  },
+  supportedFileType(fileType) {
+    switch (fileType) {
+      case 'jpg':
+      case 'jpeg':
+      case 'jfif':
+      case 'jpe':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return null;
+    }
+  },
+  isValidRequest(url) {
+    return splitResizableUrl(url) !== null || splitOriginalUrl(url) !== null;
+  },
+  getImageParams(req) {
+    const matches = splitResizableUrl(req.url);
+    let res;
+    if (matches !== null) {
+      res = {
+        fileName: matches[1],
+        resolutionX: parseInt(matches[2], 10),
+        resolutionY: parseInt(matches[3], 10),
+        fileType: matches[6].toLowerCase(),
+        fit: 'clip'
+      };
+
+      if (matches[8] && ['clip', 'crop'].indexOf(matches[8].toLowerCase()) > -1) {
+        res.fit = matches[8].toLowerCase();
+      }
+
+      if (matches[5] !== undefined) {
+        res.resolutionX = res.resolutionX * parseInt(matches[5], 10);
+        res.resolutionY = res.resolutionY * parseInt(matches[5], 10);
+      }
+    } else {
+      const matchesOriginal = splitOriginalUrl(req.url);
+      res = {
+        fileName: matchesOriginal[1],
+        fileType: matchesOriginal[2].toLowerCase()
+      };
+    }
+    return res;
+  }
+};
 
 export default UrlParsing;

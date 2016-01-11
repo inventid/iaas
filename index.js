@@ -28,8 +28,8 @@ AWS.config.update({
 const S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
-var insertImage;
-var selectImage;
+let insertImage;
+let selectImage;
 
 function logRequest(req, res, time) {
   const remoteIp = req.headers['x-forwarded-for'] || req.ip;
@@ -48,7 +48,7 @@ function logRequest(req, res, time) {
       obj.cache_hit = true;
     }
     const params = parsing.getImageParams(req);
-    for (var param in params) {
+    for (let param in params) {
       if (params.hasOwnProperty(param)) {
         obj[param] = params[param];
       }
@@ -57,10 +57,54 @@ function logRequest(req, res, time) {
   log.log('debug', JSON.stringify(obj));
 }
 
+function getKeyFromParams(params) {
+  return `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.${params.fileType}`;
+}
+
+function correctlyResize(file, params, callback) {
+  im(file).size((err, size) => {
+    if (err) {
+      return log.log('error', err);
+    }
+    const originalRatio = size.width / size.height;
+    const newRatio = params.resolutionX / params.resolutionY;
+
+    let resizeFactor;
+    let cropX = 0;
+    let cropY = 0;
+    let cropWidth = size.width;
+    let cropHeight = size.height;
+
+    if (params.fit === 'crop') {
+      if (originalRatio > newRatio) {
+        resizeFactor = size.height / params.resolutionY;
+        cropWidth = size.width / resizeFactor;
+        cropHeight = params.resolutionY;
+        cropX = (cropWidth - params.resolutionX) / 2;
+      } else {
+        resizeFactor = size.width / params.resolutionX;
+        cropWidth = params.resolutionX;
+        cropHeight = size.height / resizeFactor;
+        cropY = (cropHeight - params.resolutionY) / 2;
+      }
+    }
+
+    let workImageClient = im(file);
+    if (resizeFactor) {
+      workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(params.resolutionX, params.resolutionY, cropX, cropY);
+    } else {
+      workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
+    }
+    //Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
+    if (params.fileType === 'jpg') {
+      workImageClient = workImageClient.interlace('Line');
+    }
+    callback(workImageClient);
+  });
+}
 
 const Image = {
-  get(req, res)
-  {
+  get(req, res) {
     if (!parsing.isValidRequest(req.url)) {
       // Invalid URL
       return helpers.send404(res, req.url);
@@ -95,9 +139,9 @@ const Image = {
           res.status(404).end();
         }
       });
-      return;
+      return null;
     }
-    log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`);
+    log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`); //eslint-disable-line max-len
 
     Image.checkCacheOrCreate(params, res);
   },
@@ -128,7 +172,7 @@ const Image = {
       Image.encodeAndUpload(params, res);
     });
   },
-  encodeAndUpload (params, res) {
+  encodeAndUpload(params, res) {
     const file = `${config.get('originals_dir')}/${params.fileName}`;
     fs.access(file, (err) => {
       if (err) {
@@ -139,7 +183,7 @@ const Image = {
       // Get the image and resize it
       res.writeHead(200, {
         'Content-Type': parsing.supportedFileType(params.fileType),
-        'Expires': helpers.farFutureDate(),
+        Expires: helpers.farFutureDate(),
         'Cache-Control': 'public'
       });
 
@@ -197,7 +241,6 @@ const Image = {
           log.log('error', err);
         }
       });
-
     });
   },
   upload(req, res) {
@@ -257,7 +300,7 @@ const Image = {
     )
     ;
   },
-  getOriginal (req, res) {
+  getOriginal(req, res) {
     const matches = parsing.getImageParams(req);
     log.log('info', `Requested original image ${matches.fileName} in format ${matches.fileType}`);
     if (!parsing.supportedFileType(matches.fileType)) {
@@ -272,68 +315,21 @@ const Image = {
       const headers = {
         'Content-Type': parsing.supportedFileType(matches.fileType),
         'Cache-Control': 'public',
-        'Etag': `${matches.fileName}_${matches.fileType}`,
-        'Expires': helpers.farFutureDate()
+        Etag: `${matches.fileName}_${matches.fileType}`,
+        Expires: helpers.farFutureDate()
       };
       res.writeHead(200, headers);
-      fs.readFile(file, (err, data) => {
+      fs.readFile(file, (_, data) => {
         res.end(data);
       });
     });
   }
 };
 
-function correctlyResize(file, params, callback) {
-  im(file).size((err, size) => {
-    if (err) {
-      return log.log('error', err);
-    }
-    const originalRatio = size.width / size.height;
-    const newRatio = params.resolutionX / params.resolutionY;
-
-    let resizeFactor;
-    let cropX = 0;
-    let cropY = 0;
-    let cropWidth = size.width;
-    let cropHeight = size.height;
-
-    if (params.fit === 'crop') {
-      if (originalRatio > newRatio) {
-        resizeFactor = size.height / params.resolutionY;
-        cropWidth = size.width / resizeFactor;
-        cropHeight = params.resolutionY;
-        cropX = (cropWidth - params.resolutionX) / 2;
-      }
-      else {
-        resizeFactor = size.width / params.resolutionX;
-        cropWidth = params.resolutionX;
-        cropHeight = size.height / resizeFactor;
-        cropY = (cropHeight - params.resolutionY) / 2;
-      }
-    }
-
-    let workImageClient = im(file);
-    if (resizeFactor) {
-      workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(params.resolutionX, params.resolutionY, cropX, cropY);
-    } else {
-      workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
-    }
-    //Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
-    if (params.fileType === 'jpg') {
-      workImageClient = workImageClient.interlace('Line');
-    }
-    callback(workImageClient);
-  });
-}
-
-function getKeyFromParams(params) {
-  return `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.${params.fileType}`;
-}
-
 function startServer() {
   // Set the queries
-  insertImage = db.prepare("INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)");
-  selectImage = db.prepare("SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?");
+  insertImage = db.prepare('INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)');
+  selectImage = db.prepare('SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?');
 
   // Create the server
   const app = express();
@@ -355,7 +351,7 @@ function startServer() {
   app.post('/*', Image.upload);
 
   // And listen!
-  const port = process.env.PORT || 1337;
+  const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
   app.listen(port, () => {
     token.setDb(db);
     log.log('info', `Server started listening on port ${port}`);
@@ -365,12 +361,12 @@ function startServer() {
 try {
   fs.statSync(config.get('db_file'));
   // If we get here the database existed
-  log.log('info', "Using existing db file: " + config.get('db_file'));
+  log.log('info', `Using existing db file: ${config.get('db_file')}`);
   db = new sqlite3.Database(config.get('db_file'));
   startServer();
 } catch (e) {
   // Database did not exist so we just create it
-  log.log('info', "Creating db file: " + config.get('db_file'));
+  log.log('info', `Creating db file: ${config.get('db_file')}`);
   db = new sqlite3.Database(config.get('db_file'));
   database.prepareDb(db, startServer);
 }

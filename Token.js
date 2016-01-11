@@ -2,21 +2,18 @@ import uuid from 'node-uuid';
 
 import log from './Log';
 
-let insertToken;
-let consumeToken;
-let deleteOldTokens;
+const insertToken = `INSERT INTO tokens (id, image_id, valid_until, used) VALUES ($1,$2,now() + interval '15 minute', 0)`;
+const consumeToken = `UPDATE tokens SET used=1 WHERE id=$1 AND image_id=$2 AND valid_until >= now() AND used=0`;
+const deleteOldTokens = `DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0`;
+let db;
 
 const Token = {
   setDb(database) {
-    /*eslint-disable */
-    insertToken = database.prepare("INSERT INTO tokens (id, image_id, valid_until, used) VALUES (?,?,datetime('now','+15 minute'), 0)");
-    consumeToken = database.prepare("UPDATE tokens SET used=1 WHERE id=? AND image_id=? AND valid_until>= datetime('now') AND used=0");
-    deleteOldTokens = database.prepare("DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0");
-    /*eslint-enable */
+    db = database;
   },
   // This method is madness, but node-sqlite3 binds the this, so #noLambda
   consume(token, id, callback) {
-    consumeToken.run([token, id], function (err) {
+    db.query(consumeToken, [token, id], function (err) {
       callback(err, this);
     });
   },
@@ -29,16 +26,16 @@ const Token = {
       return res.end();
     }
     // Ensure the id wasnt requested or used previously
-    insertToken.run([newToken, req.body.id], (err) => {
+    db.query(insertToken, [newToken, req.body.id], (err) => {
       if (!err) {
         res.json({token: newToken}).end();
         log.log('info', 'Created token successfully');
         if (Token.shouldRunCleanup()) {
           Token.cleanup();
         }
-        res.end();
       } else {
-        return res.writeHead(403, 'Forbidden').json({error: 'The requested image_id is already requested'}).end();
+        res.statusCode = 403;
+        res.json({error: 'The requested image_id is already requested'}).end();
       }
     });
   },
@@ -47,7 +44,7 @@ const Token = {
   },
   cleanup() {
     log.log('info', 'Doing a token cleanup');
-    deleteOldTokens.run([], (err) => {
+    db.query(deleteOldTokens, [], (err) => {
       if (!err) {
         log.log('info', `Cleaned ${this.changes} tokens from the db`);
       } else {

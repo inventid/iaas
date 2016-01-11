@@ -10,6 +10,7 @@ RUN npm install -g pm2 babel-cli babel-preset-es2015
 
 # Export the database, originals dir and the config dir
 RUN mkdir /opt/live-image-resize
+RUN mkdir /opt/live-image-resize/migrations
 RUN mkdir /opt/live-image-resize/config
 RUN mkdir /opt/images
 RUN mkdir /opt/db
@@ -25,9 +26,9 @@ RUN cd /opt/live-image-resize && npm install
 
 # Add the application
 ADD *.js /opt/live-image-resize/src/
+ADD migrations /opt/live-image-resize/migrations/
 RUN cd /opt/live-image-resize/src && babel -d ../ *.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
 CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=1"]
-

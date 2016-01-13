@@ -55,7 +55,7 @@ function logRequest(req, res, time) {
           obj[param] = params[param];
         }
       }
-    } catch(e) {
+    } catch (e) {
       log.log('info', `Could not extract image parameters, might not have been an image request: ${req.url}`);
     }
   }

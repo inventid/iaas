@@ -260,7 +260,7 @@ const Image = {
 
     // We support the file type
     token.consume(sentToken, matches[1], (err, dbResult) => {
-        if (err || dbResult._result.rowCount !== 1) { //eslint-disable-line no-underscore-dangle
+        if (err || dbResult.rowCount !== 1) {
           return helpers.send403(res);
         }
         // And we support the filetype

@@ -11,10 +11,9 @@ const Token = {
   setDb(database) {
     db = database;
   },
-  // This method is madness, but node-sqlite3 binds the this, so #noLambda
   consume(token, id, callback) {
-    db.query(consumeToken, [token, id], function (err) {
-      callback(err, this);
+    db.query(consumeToken, [token, id], (err, res) => {
+      callback(err, res);
     });
   },
   create(req, res) {

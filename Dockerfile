@@ -2,7 +2,7 @@ FROM node:5.3
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
-    apt-get install -y imagemagick sqlite3 && \
+    apt-get install -y imagemagick && \
     apt-get autoremove -y && \
     apt-get clean
 

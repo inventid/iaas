@@ -74,8 +74,8 @@ It will then additionally load the `production.json` file.
 
 ### Database
 
-To keep the cache links, an additional SQLite database is used.
-On first run, simple first call `node prepare.js` to create the database.
+To keep the cache links, an additional Postgresql database is used.
+The program will auto create the tables and maintain the schema, using [pg-migration](https://github.com/rogierslag/pg-migration).
 
 ### Originals
 

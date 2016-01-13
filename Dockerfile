@@ -13,9 +13,7 @@ RUN mkdir /opt/live-image-resize
 RUN mkdir /opt/live-image-resize/migrations
 RUN mkdir /opt/live-image-resize/config
 RUN mkdir /opt/images
-RUN mkdir /opt/db
-RUN chmod 0777 /opt/db
-VOLUME ["/opt/db", "/opt/images", "/opt/live-image-resize/config"]
+VOLUME ["/opt/images", "/opt/live-image-resize/config"]
 
 EXPOSE 1337
 
@@ -31,4 +29,4 @@ RUN cd /opt/live-image-resize/src && babel -d ../ *.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=1"]
+CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=2"]

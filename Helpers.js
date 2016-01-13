@@ -6,11 +6,14 @@ const Helpers = {
   serverStatus(res, dbDone) {
     if (dbDone) {
       res.statuscode = 200;
-      res.write('OK').end();
-      log.log('info', 'healthcheck performed');
+      res.write('OK');
+      res.end();
+      log.log('info', 'healthcheck OK');
     } else {
       res.statusCode = 500;
-      res.write('No database connection').end();
+      res.write('No database connection');
+      res.end();
+      log.log('error', 'healthcheck FAILED');
     }
   },
   robotsTxt(req, res) {

@@ -32,8 +32,12 @@ const Helpers = {
     res.setHeader('Access-Control-Allow-Method', 'GET');
     next();
   },
-  send404(res, url) {
-    log.log('warning', `404 Error for ${url}`);
+  send404(res, url, error = true) {
+    if (error) {
+      log.log('warning', `404 Error for ${url}`);
+    } else {
+      log.log('info', `404 Error for ${url}`);
+    }
     res.statusCode = 404;
     res.end();
   },

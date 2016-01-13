@@ -48,11 +48,15 @@ function logRequest(req, res, time) {
     } else if (res.statusCode === 307) {
       obj.cache_hit = true;
     }
-    const params = parsing.getImageParams(req);
-    for (let param in params) {
-      if (params.hasOwnProperty(param)) {
-        obj[param] = params[param];
+    try {
+      const params = parsing.getImageParams(req);
+      for (let param in params) {
+        if (params.hasOwnProperty(param)) {
+          obj[param] = params[param];
+        }
       }
+    } catch(e) {
+      log.log('info', `Could not extract image parameters, might not have been an image request: ${req.url}`);
     }
   }
   log.log('debug', JSON.stringify(obj));
@@ -334,7 +338,7 @@ function startServer() {
   app.use(responseTime(logRequest));
   app.use(helpers.allowCrossDomain);
   app.get('/', (req, res) => {
-    helpers.send404(res, '');
+    helpers.send404(res, '/', false);
   });
   app.get('/healthcheck', (req, res) => {
     helpers.serverStatus(res, dbDone);

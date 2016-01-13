@@ -4,20 +4,21 @@ import formidable from 'formidable';
 import fs from 'fs-extra';
 import config from 'config';
 import AWS from 'aws-sdk';
-import sqlite3dep from 'sqlite3';
 import responseTime from 'response-time';
 import bodyParser from 'body-parser';
+import pg from 'pg';
+import migrateAndStart from 'pg-migration';
 
 const im = gm.subClass({imageMagick: true});
-const sqlite3 = sqlite3dep.verbose();
 
 import token from './Token';
 import log from './Log';
 import helpers from'./Helpers';
-import database from'./Database';
 import parsing from './UrlParsing';
 
+const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
 let db;
+let dbDone;
 
 // The AWS config needs to be set before this object is created
 AWS.config.update({
@@ -28,8 +29,8 @@ AWS.config.update({
 const S3 = new AWS.S3();
 
 // Re-use exisiting prepared queries
-let insertImage;
-let selectImage;
+const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url) VALUES ($1,$2,$3,$4,$5,$6)';
+const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5';
 
 function logRequest(req, res, time) {
   const remoteIp = req.headers['x-forwarded-for'] || req.ip;
@@ -157,15 +158,15 @@ const Image = {
   },
   checkCacheOrCreate(params, res) {
     // Check if it exists in the cache
-    selectImage.get([params.fileName,
+    db.query(selectImage, [params.fileName,
       params.resolutionX,
       params.resolutionY,
       params.fit,
       parsing.supportedFileType(params.fileType)
     ], (err, data) => {
-      if (!err && data) {
+      if (!err && data.rowCount === 1) {
         // It is in the cache, so redirect to there
-        return helpers.send307DueToCache(res, params, data.url);
+        return helpers.send307DueToCache(res, params, data.rows[0].url);
       }
 
       // It does not exist in the cache, so generate and upload
@@ -231,7 +232,7 @@ const Image = {
       }
       log.log('info', `Uploading of ${key} went very well`);
       const url = `${config.get('aws.bucket_url')}/${key}`;
-      insertImage.run([params.fileName,
+      db.query(insertImage, [params.fileName,
         params.resolutionX,
         params.resolutionY,
         params.fit,
@@ -255,7 +256,7 @@ const Image = {
 
     // We support the file type
     token.consume(sentToken, matches[1], (err, dbResult) => {
-        if (err || dbResult.changes !== 1) {
+        if (err || dbResult._result.rowCount !== 1) { //eslint-disable-line no-underscore-dangle
           return helpers.send403(res);
         }
         // And we support the filetype
@@ -309,7 +310,7 @@ const Image = {
     const file = `${config.get('originals_dir')}/${matches.fileName}`;
     fs.access(file, fs.R_OK, (err) => {
       if (err) {
-        log.log('warn', 'Image ${matches.fileName} is not available locally');
+        log.log('warn', `Image ${matches.fileName} is not available locally`);
         return helpers.send404(res, file);
       }
       const headers = {
@@ -327,10 +328,6 @@ const Image = {
 };
 
 function startServer() {
-  // Set the queries
-  insertImage = db.prepare('INSERT INTO images (id, x, y, fit, file_type, url) VALUES (?,?,?,?,?,?)');
-  selectImage = db.prepare('SELECT url FROM images WHERE id=? AND x=? AND y=? AND fit=? AND file_type=?');
-
   // Create the server
   const app = express();
   app.use(bodyParser.json());
@@ -339,7 +336,9 @@ function startServer() {
   app.get('/', (req, res) => {
     helpers.send404(res, '');
   });
-  app.get('/healthcheck', helpers.serverStatus);
+  app.get('/healthcheck', (req, res) => {
+    helpers.serverStatus(res, dbDone);
+  });
   app.get('/robots.txt', helpers.robotsTxt);
   app.get('/favicon.ico', (req, res) => {
     helpers.send404(res, 'favicon.ico');
@@ -358,15 +357,13 @@ function startServer() {
   });
 }
 
-try {
-  fs.statSync(config.get('db_file'));
-  // If we get here the database existed
-  log.log('info', `Using existing db file: ${config.get('db_file')}`);
-  db = new sqlite3.Database(config.get('db_file'));
-  startServer();
-} catch (e) {
-  // Database did not exist so we just create it
-  log.log('info', `Creating db file: ${config.get('db_file')}`);
-  db = new sqlite3.Database(config.get('db_file'));
-  database.prepareDb(db, startServer);
-}
+pg.connect(connectionString, (err, client, done) => {
+  if (err) {
+    log.log('error', `error fetching client from pool: ${err}`);
+  } else {
+    db = client;
+    dbDone = done;
+
+    migrateAndStart(db, './migrations', startServer);
+  }
+});

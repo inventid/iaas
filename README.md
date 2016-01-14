@@ -76,6 +76,7 @@ It will then additionally load the `production.json` file.
 
 To keep the cache links, an additional Postgresql database is used.
 The program will auto create the tables and maintain the schema, using [pg-migration](https://github.com/rogierslag/pg-migration).
+You can use a Docker container to run postgresql in development, or use the [excellent postgres app for OSX](http://postgresapp.com/).
 
 ### Originals
 
@@ -83,6 +84,26 @@ For quick saving, the original files are kept in `images` subdirectory (retrievi
 Be sure to keep this data and backup it.
 You can also use the config to let it point to another directory.
 In that case, ensure the user can write there!
+
+### Migrating from versions < 1.0.0 to 1.0.0
+
+Due to the change from sqlite to postgresql, you will need to do a little migration:
+
+1. Create a postgresql database on your server
+1. Execute the first two migrations to create the database structure
+1. Create the pg-migration tables `CREATE TABLE dbchangelog(id bigint, datetime timestamp with time zone);CREATE UNIQUE index changeset on dbchangelog(id);`
+1. Add the first two ids to the table
+1. Add the `postgresql` section to your config file
+1. Disable uploading of images
+1. Dump your current database `sqlite3 /opt/live-image-resize/cache.sqlite .dump > /tmp/image.sql`
+1. Move this file to your database server. Delete any schema related lines (`CREATE TABLE` or `CREATE INDEX`).
+1. Import the dataset by using `cat /tmp/image.sql | sudo -u postgres psql imageresizer`
+1. Set the table owner to your user `ALTER TABLE dbchangelog OWNER TO imageresizer; ALTER TABLE tokens OWNER TO imageresizer; ALTER TABLE images OWNER TO imageresizer;`
+1. Pull the new Docker container
+1. Restart the container (the final changeset will be applied).
+1. Re-enable your uploads
+
+That's it!
 
 ## Contributing
 

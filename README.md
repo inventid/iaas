@@ -140,3 +140,5 @@ curl -vvv -XPOST http://192.168.99.100:1337/${IMAGE}.jpg -H "X-Token: ${TOKEN}" 
 You can use the `Dockerfile` to quickly stage stuff locally (on OSX use `docker-machine`).
 
 If you have additions for the code, please [fork the repo](https://github.com/inventid/live-image-resize/fork) and open a Pull Request.
+
+![Main developing companies](https://github.com/inventid/live-image-resize/blob/develop/images/example?raw=true)

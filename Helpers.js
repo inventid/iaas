@@ -47,7 +47,7 @@ const Helpers = {
     res.end();
   },
   send307DueTooLarge(res, params) {
-    res.statuscode = 307;
+    res.statusCode = 307;
     res.setHeader('Location', `/${params.fileName}_${params.resolutionX}_${params.resolutionY}.${params.fileType}?fit=${params.fit}`);
     res.setHeader('X-Redirect-Info', 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.'); //eslint-disable-line max-len
     res.end();

@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     apt-get clean
 
-RUN npm install -g pm2 babel-cli babel-preset-es2015
+RUN npm install -g babel-cli babel-preset-es2015
 
 # Export the database, originals dir and the config dir
 RUN mkdir /opt/live-image-resize
@@ -29,4 +29,5 @@ RUN cd /opt/live-image-resize/src && babel -d ../ *.js
 
 # Run the entire thing!
 WORKDIR /opt/live-image-resize
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=2"]
+CMD ["node", "index.js"]
+

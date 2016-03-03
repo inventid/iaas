@@ -122,12 +122,21 @@ const Image = {
     }
 
     let valid = true;
+
+
+    const providedRatio = params.resolutionX / params.resolutionY;
     if (params.resolutionX > config.get('constraints.max_width')) {
       params.resolutionX = config.get('constraints.max_width');
+      if(params.fit === 'crop'){
+        params.resolutionY = params.resolutionX / providedRatio;
+      }
       valid = false;
     }
     if (params.resolutionY > config.get('constraints.max_height')) {
       params.resolutionY = config.get('constraints.max_height');
+      if(params.fit === 'crop'){
+        params.resolutionX = params.resolutionY * providedRatio;
+      }
       valid = false;
     }
 

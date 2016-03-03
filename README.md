@@ -77,6 +77,15 @@ It will then additionally load the `production.json` file.
 To keep the cache links, an additional Postgresql database is used.
 The program will auto create the tables and maintain the schema, using [pg-migration](https://github.com/rogierslag/pg-migration).
 You can use a Docker container to run postgresql in development, or use the [excellent postgres app for OSX](http://postgresapp.com/).
+You need to create the database and its credentials yourself.
+After creating these, edit the `default.json` config file.
+An example for command line `psql` is:
+
+```bash
+ sudo -u postgres psql -c "CREATE USER imageresizer WITH PASSWORD 'rogierisgaaf';"
+ sudo -u postgres createdb -E UTF8 -T template0 --locale=en_US.utf8 imageresizer
+ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE imageresizer to imageresizer;"
+ ```
 
 ### Originals
 
@@ -104,6 +113,19 @@ Due to the change from sqlite to postgresql, you will need to do a little migrat
 1. Re-enable your uploads
 
 That's it!
+
+## Developing
+
+Developing is relatively easy, once you know how it works.
+Since some programs are required for running the application, we recommend to develop using Docker (the rebuild is quite fast).
+On Linux and Windows, you will need to install Docker.
+On OSX the Docker Toolbox suffices.
+
+1. After installing the Docker toolbox (which we will use here), you need to create a Docker machine `docker-machine create inventid --driver=virtualbox`
+2. Then define the docker machine `eval $(docker-machine env inventid)`
+3. Ensure you have a PostgreSQL instance available, see the section on _Database_ on how to achieve this
+3. Next (this also applies for Linux) we'll create the container `mkdir -p /tmp/images && docker build --tag=test . && docker run -p 1337:1337 -v /tmp:/opt/images -v <YOUR_GIT_REPO_LOCATION>/config:/opt/live-image-resize/config test`
+4. Now you can start developing. After each change, stop the container (Ctrl-C) and re-execute the command again. Rebuilds of the container are relatively fast.
 
 ## Contributing
 

@@ -2,9 +2,11 @@ import uuid from 'node-uuid';
 
 import log from './Log';
 
+/*eslint-disable quotes*/
 const insertToken = `INSERT INTO tokens (id, image_id, valid_until, used) VALUES ($1,$2,now() + interval '15 minute', 0)`;
 const consumeToken = `UPDATE tokens SET used=1 WHERE id=$1 AND image_id=$2 AND valid_until >= now() AND used=0`;
 const deleteOldTokens = `DELETE FROM tokens WHERE valid_until < datetime('now') AND used=0`;
+/*eslint-enable*/
 let db;
 
 const Token = {
@@ -22,7 +24,8 @@ const Token = {
     const newToken = uuid.v4();
     if (!req.body.id) {
       res.writeHead(400, 'Bad request');
-      return res.end();
+      res.end();
+      return;
     }
     // Ensure the id wasnt requested or used previously
     db.query(insertToken, [newToken, req.body.id], (err) => {

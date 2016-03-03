@@ -13,7 +13,7 @@ const im = gm.subClass({imageMagick: true});
 
 import token from './Token';
 import log from './Log';
-import helpers from'./Helpers';
+import helpers from './Helpers';
 import parsing from './UrlParsing';
 
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -69,7 +69,8 @@ function getKeyFromParams(params) {
 function correctlyResize(file, params, callback) {
   im(file).size((err, size) => {
     if (err) {
-      return log.log('error', err);
+      log.log('error', err);
+      return;
     }
     const originalRatio = size.width / size.height;
     const newRatio = params.resolutionX / params.resolutionY;
@@ -112,27 +113,39 @@ const Image = {
   get(req, res) {
     if (!parsing.isValidRequest(req.url)) {
       // Invalid URL
-      return helpers.send404(res, req.url);
+      helpers.send404(res, req.url);
+      return;
     }
 
     const params = parsing.getImageParams(req);
 
     if (parsing.supportedFileType(params.fileType) === null) {
-      return helpers.send415(res, params.fileType);
+      helpers.send415(res, params.fileType);
+      return;
     }
 
     let valid = true;
+
+
+    const providedRatio = params.resolutionX / params.resolutionY;
     if (params.resolutionX > config.get('constraints.max_width')) {
       params.resolutionX = config.get('constraints.max_width');
+      if (params.fit === 'crop') {
+        params.resolutionY = params.resolutionX / providedRatio;
+      }
       valid = false;
     }
     if (params.resolutionY > config.get('constraints.max_height')) {
       params.resolutionY = config.get('constraints.max_height');
+      if (params.fit === 'crop') {
+        params.resolutionX = params.resolutionY * providedRatio;
+      }
       valid = false;
     }
 
     if (!valid) {
-      return helpers.send307DueTooLarge(res, params);
+      helpers.send307DueTooLarge(res, params);
+      return;
     }
     //HEAD requests won't be redirected automatically, so instead we'll always either return a 200
     //or a 404, indicating if the corresponding GET method will result in an image.
@@ -144,7 +157,7 @@ const Image = {
           res.status(404).end();
         }
       });
-      return null;
+      return;
     }
     log.log('info', `Requesting file ${params.fileName} in ${params.fileType} format in a ${params.resolutionX}x${params.resolutionY}px resolution`); //eslint-disable-line max-len
 
@@ -170,7 +183,8 @@ const Image = {
     ], (err, data) => {
       if (!err && data.rowCount === 1) {
         // It is in the cache, so redirect to there
-        return helpers.send307DueToCache(res, params, data.rows[0].url);
+        helpers.send307DueToCache(res, params, data.rows[0].url);
+        return;
       }
 
       // It does not exist in the cache, so generate and upload
@@ -182,7 +196,8 @@ const Image = {
     fs.access(file, (err) => {
       if (err) {
         log.log('warn', `File ${params.fileName} was requested but did not exist`);
-        return helpers.send404(res, params.fileName);
+        helpers.send404(res, params.fileName);
+        return;
       }
 
       // Get the image and resize it
@@ -255,13 +270,15 @@ const Image = {
     const matches = req.url.match(/^\/(.*)\.([^.]+)$/);
     log.log('info', `Requested image upload for image_id ${matches[1]} with token ${sentToken}`);
     if (!parsing.supportedFileType(matches[2])) {
-      return helpers.send415(res, matches[2]);
+      helpers.send415(res, matches[2]);
+      return;
     }
 
     // We support the file type
     token.consume(sentToken, matches[1], (err, dbResult) => {
         if (err || dbResult.rowCount !== 1) {
-          return helpers.send403(res);
+          helpers.send403(res);
+          return;
         }
         // And we support the filetype
         log.log('info', `Starting to write original file ${matches[1]}`);
@@ -269,7 +286,8 @@ const Image = {
 
         form.parse(req, (err, fields, files) => {
           if (err) {
-            return helpers.send500(res, err);
+            helpers.send500(res, err);
+            return;
           }
           const temp_path = files.image.path;
           const destination_path = `${config.get('originals_dir')}/${matches[1]}`;
@@ -278,7 +296,8 @@ const Image = {
             .autoOrient()
             .write(destination_path, (err) => {
               if (err) {
-                return helpers.send500(res, err);
+                helpers.send500(res, err);
+                return;
               }
               // Yup, we have to re-read the file, since the possible orientation is not taken into account
               im(destination_path)
@@ -309,13 +328,15 @@ const Image = {
     const matches = parsing.getImageParams(req);
     log.log('info', `Requested original image ${matches.fileName} in format ${matches.fileType}`);
     if (!parsing.supportedFileType(matches.fileType)) {
-      return helpers.send404(res, req.url);
+      helpers.send404(res, req.url);
+      return;
     }
     const file = `${config.get('originals_dir')}/${matches.fileName}`;
     fs.access(file, fs.R_OK, (err) => {
       if (err) {
         log.log('warn', `Image ${matches.fileName} is not available locally`);
-        return helpers.send404(res, file);
+        helpers.send404(res, file);
+        return;
       }
       const headers = {
         'Content-Type': parsing.supportedFileType(matches.fileType),

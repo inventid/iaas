@@ -1,6 +1,6 @@
 {
   "name": "live-image-resize",
-  "version": "0.1.1",
+  "version": "1.1.0",
   "description": "Dynamic image resizing service, using AWS S3 as a cache",
   "main": "index.js",
   "dependencies": {

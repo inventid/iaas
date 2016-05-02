@@ -9,7 +9,7 @@
  * [5] The scaling parameter (for retina)
  * [6] The file type
  * [7] The query string, dont use this, use [8] instead
- * [8] The format (either clip or crop)
+ * [8] The format (either clip or crop or canvas)
  * @param url The url to parse
  * @returns {Array|{index: number, input: string}|*|{ID, CLASS, NAME, ATTR, TAG, CHILD, POS, PSEUDO}}
  */
@@ -62,7 +62,7 @@ const UrlParsing = {
         fit: 'clip'
       };
 
-      if (matches[8] && ['clip', 'crop'].indexOf(matches[8].toLowerCase()) > -1) {
+      if (matches[8] && ['clip', 'crop', 'canvas'].indexOf(matches[8].toLowerCase()) > -1) {
         res.fit = matches[8].toLowerCase();
       }
 

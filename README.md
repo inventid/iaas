@@ -127,6 +127,14 @@ On OSX the Docker Toolbox suffices.
 3. Next (this also applies for Linux) we'll create the container `mkdir -p /tmp/images && docker build --tag=test . && docker run -p 1337:1337 -v /tmp:/opt/images -v <YOUR_GIT_REPO_LOCATION>/config:/opt/live-image-resize/config test`
 4. Now you can start developing. After each change, stop the container (Ctrl-C) and re-execute the command again. Rebuilds of the container are relatively fast.
 
+Quick way to send images (ensure you have `jq` installed)
+```bash
+IMAGE=test1234567
+RES=`curl -vvv -XPOST http://192.168.99.100:1337/token -d "{\"id\": \"${IMAGE}\"}" -H "Content-Type: application/json"`
+TOKEN=`echo $RES | jq -r .token`
+curl -vvv -XPOST http://192.168.99.100:1337/${IMAGE}.jpg -H "X-Token: ${TOKEN}" -F "image=@/Users/Rogier/Downloads/878261728-5f264338.jpg"
+```
+
 ## Contributing
 
 You can use the `Dockerfile` to quickly stage stuff locally (on OSX use `docker-machine`).

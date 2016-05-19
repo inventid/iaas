@@ -32,6 +32,11 @@ const Helpers = {
     res.setHeader('Access-Control-Allow-Method', 'GET');
     next();
   },
+  send400(res, message = '') {
+    log.log('warning', `Invalid request was done: ${message}`);
+    res.statusCode = 400;
+    res.end(message);
+  },
   send404(res, url, error = true) {
     if (error) {
       log.log('warning', `404 Error for ${url}`);

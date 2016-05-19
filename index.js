@@ -270,7 +270,7 @@ const Image = {
     // Upload the RAW image to disk, stripped of its extension
     // First check the token
     const sentToken = req.headers['x-token'];
-    const matches = req.url.match(/^\/(.*)\.([^.]+)$/);
+    const matches = req.path.match(/^\/(.*)\.([^.]+)$/);
     log.log('info', `Requested image upload for image_id ${matches[1]} with token ${sentToken}`);
     if (!parsing.supportedFileType(matches[2])) {
       helpers.send415(res, matches[2]);
@@ -295,9 +295,19 @@ const Image = {
           const temp_path = files.image.path;
           const destination_path = `${config.get('originals_dir')}/${matches[1]}`;
 
-          im(temp_path)
-            .autoOrient()
-            .write(destination_path, (err) => {
+          let oriented = im(temp_path).autoOrient();
+          if ( req.query.x && req.query.y && req.query.width && req.query.height ) {
+            const x = parseInt(req.query.x, 10);
+            const y = parseInt(req.query.y, 10);
+            const width = parseInt(req.query.width, 10);
+            const height = parseInt(req.query.height, 10);
+            if ( isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
+              helpers.send400('Given crop parameters are invalid');
+              return;
+            }
+            oriented = oriented.crop(width, height, x, y);
+          }
+          oriented.write(destination_path, (err) => {
               if (err) {
                 helpers.send500(res, err);
                 return;

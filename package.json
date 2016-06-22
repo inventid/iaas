@@ -2,7 +2,7 @@
   "name": "live-image-resize",
   "version": "1.1.0",
   "description": "Dynamic image resizing service, using AWS S3 as a cache",
-  "main": "index.js",
+  "main": "src/index.js",
   "dependencies": {
     "aws-sdk": "^2.2.26",
     "body-parser": "^1.14.2",
@@ -10,12 +10,13 @@
     "express": "^4.13.3",
     "formidable": "^1.0.17",
     "fs-extra": "^0.26.0",
-    "gm": "^1.21.1",
+    "gm": "^1.22.0",
     "node-uuid": "^1.4.7",
     "pg": "^4.4.3",
     "pg-migration": "^1.0.1",
     "pg-native": "^1.10.0",
-    "response-time": "^2.3.1"
+    "response-time": "^2.3.1",
+    "uuid": "^2.0.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -1,115 +1,72 @@
-import express from 'express';
-import gm from 'gm';
-import formidable from 'formidable';
-import fs from 'fs-extra';
-import config from 'config';
-import AWS from 'aws-sdk';
-import responseTime from 'response-time';
-import bodyParser from 'body-parser';
-import pg from 'pg';
-import migrateAndStart from 'pg-migration';
+import express from "express";
+import gm from "gm";
+import formidable from "formidable";
+import fs from "fs-extra";
+import config from "config";
+import responseTime from "response-time";
+import bodyParser from "body-parser";
+import pg from "pg";
+import migrateAndStart from "pg-migration";
+import uuid from "uuid";
+import Token from "./Token";
+import log from "./Log";
+import helpers from "./Helpers";
+import parsing from "./UrlParsing";
+import S3 from "./AwsS3.js";
+import requestLogger from "./RequestLogger.js";
 
 const im = gm.subClass({imageMagick: true});
 
-import token from './Token';
-import log from './Log';
-import helpers from './Helpers';
-import parsing from './UrlParsing';
-
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
+let token;
 let db;
-let dbDone;
 
-// The AWS config needs to be set before this object is created
-AWS.config.update({
-  accessKeyId: config.get('aws.access_key'),
-  secretAccessKey: config.get('aws.secret_key'),
-  region: config.get('aws.region')
-});
-const S3 = new AWS.S3();
-
-// Re-use exisiting prepared queries
+// Re-use existing prepared queries
 const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url) VALUES ($1,$2,$3,$4,$5,$6)';
 const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5';
 
-function logRequest(req, res, time) {
-  const remoteIp = req.headers['x-forwarded-for'] || req.ip;
-  const obj = {
-    datetime: Date.now(),
-    method: req.method,
-    url: req.url,
-    client: remoteIp,
-    response_time: (time / 1e3),
-    response_status: res.statusCode
-  };
-  if (parsing.isGetRequest(req)) {
-    if (res.statusCode === 200) {
-      obj.cache_hit = false;
-    } else if (res.statusCode === 307) {
-      obj.cache_hit = true;
-    }
-    try {
-      const params = parsing.getImageParams(req);
-      for (let param in params) {
-        if (params.hasOwnProperty(param)) {
-          obj[param] = params[param];
-        }
-      }
-    } catch (e) {
-      log.log('info', `Could not extract image parameters, might not have been an image request: ${req.url}`);
-    }
-  }
-  log.log('debug', JSON.stringify(obj));
-}
-
+// This method creates the URL key from the parameters of the image
 function getKeyFromParams(params) {
   return `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.${params.fileType}`;
 }
 
+// This methods handles the correct resizing of an image
 function correctlyResize(file, params, callback) {
-  im(file).size((err, size) => {
-    if (err) {
-      log.log('error', err);
-      return;
-    }
-    const originalRatio = size.width / size.height;
-    const newRatio = params.resolutionX / params.resolutionY;
+  let workImageClient = im(file);
+  //Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
+  if (params.fileType === 'jpg') {
+    workImageClient = workImageClient.interlace('Line');
+  }
 
-    let resizeFactor;
-    let cropX = 0;
-    let cropY = 0;
-    let cropWidth = size.width;
-    let cropHeight = size.height;
-
-    if (params.fit === 'crop') {
-      if (originalRatio > newRatio) {
-        resizeFactor = size.height / params.resolutionY;
-        cropWidth = size.width / resizeFactor;
-        cropHeight = params.resolutionY;
-        cropX = (cropWidth - params.resolutionX) / 2;
-      } else {
-        resizeFactor = size.width / params.resolutionX;
-        cropWidth = params.resolutionX;
-        cropHeight = size.height / resizeFactor;
-        cropY = (cropHeight - params.resolutionY) / 2;
+  // Determine how to crop this
+  if (params.fit === 'crop') {
+    workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY, '^');
+    const tmpFile = `/tmp/${uuid.v4()}`;
+    workImageClient.write(tmpFile, (err) => {
+      if (err) {
+        log.log('error', `Could not write tempFile: ${err}`);
+        return;
       }
-    }
-
-    let workImageClient = im(file);
-    if (resizeFactor) {
-      workImageClient = workImageClient.resize(cropWidth, cropHeight).crop(params.resolutionX, params.resolutionY, cropX, cropY);
-    } else {
-      workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
-    }
+      workImageClient = im(tmpFile);
+      workImageClient.size((err, newSize) => {
+        if (err) {
+          log.log('error', `Could not resize tempFile: ${err}`);
+          return;
+        }
+        workImageClient = workImageClient
+          .repage(newSize.width, newSize.height, 0, 0)
+          .gravity('Center')
+          .crop(params.resolutionX, params.resolutionY, '!');
+        callback(workImageClient);
+      });
+    });
+  } else {
+    workImageClient = workImageClient.resize(params.resolutionX, params.resolutionY);
     if (params.fit === 'canvas') {
       workImageClient = workImageClient.gravity('Center').extent(params.resolutionX, params.resolutionY);
     }
-    //Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
-    if (params.fileType === 'jpg') {
-      workImageClient = workImageClient.interlace('Line');
-    }
     callback(workImageClient);
-  });
+  }
 }
 
 const Image = {
@@ -129,7 +86,7 @@ const Image = {
 
     let valid = true;
 
-
+    // Check if we are allowed to serve an image of this size and optionally redirect
     const providedRatio = params.resolutionX / params.resolutionY;
     if (params.resolutionX > config.get('constraints.max_width')) {
       params.resolutionX = config.get('constraints.max_width');
@@ -145,11 +102,11 @@ const Image = {
       }
       valid = false;
     }
-
     if (!valid) {
       helpers.send307DueTooLarge(res, params);
       return;
     }
+
     //HEAD requests won't be redirected automatically, so instead we'll always either return a 200
     //or a 404, indicating if the corresponding GET method will result in an image.
     if (req.method === 'HEAD') {
@@ -237,7 +194,7 @@ const Image = {
     // Upload to AWS
     const key = getKeyFromParams(params);
     // AWS sets the etag as MD5 of the file already
-    const upload_params = {
+    const uploadParams = {
       Bucket: config.get('aws.bucket'),
       Key: key,
       ACL: 'public-read',
@@ -247,7 +204,7 @@ const Image = {
       // We let any intermediate server cache this result as well
       CacheControl: 'public'
     };
-    S3.putObject(upload_params, (err) => {
+    S3.putObject(uploadParams, (err) => {
       if (err) {
         log.log('error', `AWS upload error: ${JSON.stringify(err)}`);
         return;
@@ -296,18 +253,9 @@ const Image = {
           const destination_path = `${config.get('originals_dir')}/${matches[1]}`;
 
           let oriented = im(temp_path).autoOrient();
-          if ( req.query.x && req.query.y && req.query.width && req.query.height ) {
-            const x = parseInt(req.query.x, 10);
-            const y = parseInt(req.query.y, 10);
-            const width = parseInt(req.query.width, 10);
-            const height = parseInt(req.query.height, 10);
-            if ( isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
-              helpers.send400('Given crop parameters are invalid');
-              return;
-            }
-            oriented = oriented.crop(width, height, x, y);
-          }
-          oriented.write(destination_path, (err) => {
+
+          const saveOriginal = (oriented) => {
+            oriented.write(destination_path, (err) => {
               if (err) {
                 helpers.send500(res, err);
                 return;
@@ -332,6 +280,20 @@ const Image = {
                   log.log('info', `Finished writing original file ${matches[1]}`);
                 });
             });
+          };
+          if (req.query.x && req.query.y && req.query.width && req.query.height) {
+            const x = parseInt(req.query.x, 10);
+            const y = parseInt(req.query.y, 10);
+            const width = parseInt(req.query.width, 10);
+            const height = parseInt(req.query.height, 10);
+            if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
+              helpers.send400('Given crop parameters are invalid');
+              return;
+            }
+            saveOriginal(oriented.crop(width, height, x, y));
+            return;
+          }
+          saveOriginal(oriented);
         });
       }
     )
@@ -366,21 +328,20 @@ const Image = {
 };
 
 function startServer() {
+  token = Token(db);
+
   // Create the server
   const app = express();
+
   app.use(bodyParser.json());
-  app.use(responseTime(logRequest));
+  app.use(responseTime(requestLogger));
   app.use(helpers.allowCrossDomain);
-  app.get('/', (req, res) => {
-    helpers.send404(res, '/', false);
-  });
-  app.get('/healthcheck', (req, res) => {
-    helpers.serverStatus(res, dbDone);
-  });
+
+  app.get('/', (req, res) => helpers.send404(res, '/', false));
+  app.get('/healthcheck', (req, res) => helpers.serverStatus(res, true));
   app.get('/robots.txt', helpers.robotsTxt);
-  app.get('/favicon.ico', (req, res) => {
-    helpers.send404(res, 'favicon.ico');
-  });
+  app.get('/favicon.ico', (req, res) => helpers.send404(res, 'favicon.ico'));
+
   app.get('/*_*_*_*x.*', Image.get);
   app.get('/*_*_*.*', Image.get);
   app.get('/*.*', Image.getOriginal);
@@ -389,19 +350,14 @@ function startServer() {
 
   // And listen!
   const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
-  app.listen(port, () => {
-    token.setDb(db);
-    log.log('info', `Server started listening on port ${port}`);
-  });
+  app.listen(port, () => log.log('info', `Server started listening on port ${port}`));
 }
 
-pg.connect(connectionString, (err, client, done) => {
+pg.connect(connectionString, (err, client) => {
   if (err) {
     log.log('error', `error fetching client from pool: ${err}`);
   } else {
     db = client;
-    dbDone = done;
-
     migrateAndStart(db, './migrations', startServer);
   }
 });

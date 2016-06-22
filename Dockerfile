@@ -23,7 +23,7 @@ ADD package.json /opt/live-image-resize/package.json
 RUN cd /opt/live-image-resize && npm install
 
 # Add the application
-ADD *.js /opt/live-image-resize/src/
+ADD src/*.js /opt/live-image-resize/src/
 ADD migrations /opt/live-image-resize/migrations/
 RUN cd /opt/live-image-resize/src && babel -d ../ *.js
 

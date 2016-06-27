@@ -22,12 +22,19 @@ let token;
 let db;
 
 // Re-use existing prepared queries
-const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url) VALUES ($1,$2,$3,$4,$5,$6)';
-const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5';
+const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url, blur) VALUES ($1,$2,$3,$4,$5,$6,$7)';
+const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5 AND blur=$6';
 
 // This method creates the URL key from the parameters of the image
 function getKeyFromParams(params) {
-  return `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.${params.fileType}`;
+  return `${params.fileName}_${params.resolutionX}x${params.resolutionY}.${params.fit}.b-${params.blur}.${params.fileType}`;
+}
+
+function optionallyBlur(workImageClient, params) {
+  if (params.blur) {
+    workImageClient = workImageClient.blur(15, 7);
+  }
+  return workImageClient;
 }
 
 // This methods handles the correct resizing of an image
@@ -57,6 +64,7 @@ function correctlyResize(file, params, callback) {
           .repage(newSize.width, newSize.height, 0, 0)
           .gravity('Center')
           .crop(params.resolutionX, params.resolutionY, '!');
+        workImageClient = optionallyBlur(workImageClient, params);
         callback(workImageClient);
       });
     });
@@ -65,13 +73,14 @@ function correctlyResize(file, params, callback) {
     if (params.fit === 'canvas') {
       workImageClient = workImageClient.gravity('Center').extent(params.resolutionX, params.resolutionY);
     }
+    workImageClient = optionallyBlur(workImageClient, params);
     callback(workImageClient);
   }
 }
 
 const Image = {
   get(req, res) {
-    if (!parsing.isValidRequest(req.url)) {
+    if (!parsing.isValidRequest(req.url, req.query)) {
       // Invalid URL
       helpers.send404(res, req.url);
       return;
@@ -139,7 +148,8 @@ const Image = {
       params.resolutionX,
       params.resolutionY,
       params.fit,
-      parsing.supportedFileType(params.fileType)
+      parsing.supportedFileType(params.fileType),
+      params.blur
     ], (err, data) => {
       if (!err && data.rowCount === 1) {
         // It is in the cache, so redirect to there
@@ -215,7 +225,7 @@ const Image = {
         params.resolutionX,
         params.resolutionY,
         params.fit,
-        parsing.supportedFileType(params.fileType), url
+        parsing.supportedFileType(params.fileType), url, params.blur
       ], (err) => {
         if (err) {
           log.log('error', err);

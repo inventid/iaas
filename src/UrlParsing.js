@@ -1,20 +1,41 @@
 /**
- * This will return an array with matches, or null if no match was found
+ * This will return an object with matches, or null if no match was found
  *
- * [0] Original string, if matching succeeded
- * [1] the image name
- * [2] the x resolution
- * [3] the y resolution
- * [4] Some pointless retina thing, use [5] instead
- * [5] The scaling parameter (for retina)
- * [6] The file type
- * [7] The query string, dont use this, use [8] instead
- * [8] The format (either clip or crop or canvas)
+ * original: Original string, if matching succeeded
+ * name: the image name
+ * width: the x resolution
+ * height: the y resolution
+ * scaling: The scaling parameter (for retina)
+ * type: The file type
+ * fit: The format (either clip or crop or canvas)
+ * blur: Whether to blur the image or not
  * @param url The url to parse
  * @returns {Array|{index: number, input: string}|*|{ID, CLASS, NAME, ATTR, TAG, CHILD, POS, PSEUDO}}
  */
-function splitResizableUrl(url) {
-  return url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.([^?]*)(\?fit=(.*))?$/);
+function splitResizableUrl(url, params) {
+  const matches = url.match(/^\/(.*)_(\d+)_(\d+)(_(\d+)x)?\.([^?]*)$/);
+  if (!matches) {
+    return null;
+  }
+  // fit and blur are default here which will be overridden later
+  const res = {
+    original: matches[0],
+    name: matches[1],
+    width: matches[2],
+    height: matches[3],
+    scaling: matches[5],
+    type: matches[6].toLowerCase(),
+    fit: 'clip',
+    blur: false
+  };
+  if (params.fit && ['clip', 'crop', 'canvas'].indexOf(params.fit.toLowerCase())) {
+    res.fit = params.fit.toLowerCase();
+  }
+  if (params.blur && params.blur.toLowerCase() === 'true') {
+    res.blur = true;
+  }
+
+  return res;
 }
 
 /**
@@ -47,28 +68,25 @@ const UrlParsing = {
         return null;
     }
   },
-  isValidRequest(url) {
-    return splitResizableUrl(url) !== null || splitOriginalUrl(url) !== null;
+  isValidRequest(url, params) {
+    return splitResizableUrl(url, params) !== null || splitOriginalUrl(url) !== null;
   },
   getImageParams(req) {
-    const matches = splitResizableUrl(req.url);
+    const matches = splitResizableUrl(req.path, req.query);
     let res;
     if (matches !== null) {
       res = {
-        fileName: matches[1],
-        resolutionX: parseInt(matches[2], 10),
-        resolutionY: parseInt(matches[3], 10),
-        fileType: matches[6].toLowerCase(),
-        fit: 'clip'
+        fileName: matches.name,
+        resolutionX: parseInt(matches.width, 10),
+        resolutionY: parseInt(matches.height, 10),
+        fileType: matches.type.toLowerCase(),
+        fit: matches.fit,
+        blur: matches.blur
       };
 
-      if (matches[8] && ['clip', 'crop', 'canvas'].indexOf(matches[8].toLowerCase()) > -1) {
-        res.fit = matches[8].toLowerCase();
-      }
-
-      if (matches[5] !== undefined) {
-        res.resolutionX = res.resolutionX * parseInt(matches[5], 10);
-        res.resolutionY = res.resolutionY * parseInt(matches[5], 10);
+      if (matches.scaling !== undefined) {
+        res.resolutionX = res.resolutionX * parseInt(matches.scaling, 10);
+        res.resolutionY = res.resolutionY * parseInt(matches.scaling, 10);
       }
     } else {
       const matchesOriginal = splitOriginalUrl(req.url);

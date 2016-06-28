@@ -1,29 +1,28 @@
 {
-  "name": "live-image-resize",
-  "version": "1.1.0",
+  "name": "iaas",
+  "version": "0.1.0",
   "description": "Dynamic image resizing service, using AWS S3 as a cache",
   "main": "src/index.js",
   "dependencies": {
     "aws-sdk": "^2.2.26",
+    "babel-polyfill": "^6.9.1",
     "body-parser": "^1.14.2",
     "config": "^1.17.1",
     "express": "^4.13.3",
     "formidable": "^1.0.17",
-    "fs-extra": "^0.26.0",
     "gm": "^1.22.0",
-    "node-uuid": "^1.4.7",
     "pg": "^4.4.3",
     "pg-migration": "^1.0.1",
     "pg-native": "^1.10.0",
-    "response-time": "^2.3.1",
-    "uuid": "^2.0.2"
+    "uuid": "^2.0.2",
+    "promisify-node": "^0.4.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/inventid/live-image-resize.git"
+    "url": "https://github.com/inventid/iaas.git"
   },
   "keywords": [
     "image",
@@ -36,11 +35,14 @@
   "author": "Rogier Slag",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/inventid/live-image-resize/issues"
+    "url": "https://github.com/inventid/iaas/issues"
   },
-  "homepage": "https://github.com/inventid/live-image-resize",
+  "homepage": "https://github.com/inventid/iaas",
   "devDependencies": {
     "babel-cli": "^6.4",
-    "babel-preset-es2015": "^6.3"
+    "babel-preset-es2015": "^6.3",
+    "babel-preset-stage-3": "^6.11.0",
+    "eslint": "^2.13.1",
+    "eslint-plugin-async-await": "0.0.0"
   }
 }

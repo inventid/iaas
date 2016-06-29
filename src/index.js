@@ -8,6 +8,7 @@ import log from "./log";
 import urlParameters from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
+import {isNotUndefined} from "./helper";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -25,7 +26,7 @@ const cropParametersOnUpload = (req) => {
   const yOffset = Number(req.query.y) || undefined;
   const width = Number(req.query.width) || undefined;
   const height = Number(req.query.height) || undefined;
-  if (xOffset && yOffset && width && height) {
+  if (isNotUndefined([xOffset, yOffset, width, height])) {
     return {
       xOffset, yOffset, width, height
     };

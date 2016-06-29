@@ -1,3 +1,5 @@
+import {isNotUndefined} from "./helper";
+
 const BLUR_RADIUS = 15;
 const BLUR_SIGMA = 7;
 
@@ -33,14 +35,14 @@ export default (req) => {
   // Extract data
   result.name = req.params.name;
   const scale = Number(req.params.scale) || 1;
-  result.width = Number(req.params.width) * scale || undefined;
-  result.height = Number(req.params.height) * scale || undefined;
+  result.width = Number(req.params.width) * scale;
+  result.height = Number(req.params.height) * scale;
 
   if (ALLOWED_TYPES.includes(req.params.format.toLowerCase())) {
     result.type = req.params.format.toLowerCase();
     result.mime = getMimeFromExtension(result.type);
   }
-  if (req.query.fit && ALLOWED_FITS.includes(req.query.fit)) {
+  if (req.query.fit && ALLOWED_FITS.includes(req.query.fit.toLowerCase())) {
     result.fit = req.query.fit.toLowerCase();
   }
   if (req.query.blur && req.query.blur === 'true') {
@@ -50,8 +52,8 @@ export default (req) => {
     }
   }
 
-  // Check if the minimum is ste
-  if (!result.name) {
+  // Check if the minimum is set
+  if (!result.name || isNotUndefined([result.width, result.height])) {
     console.warn(result, req.params, req.query);
     return null;
   }

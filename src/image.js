@@ -25,6 +25,9 @@ const interlace = async(client, params) => {
 // When cropping, we size the image first to fix completely within the bounding box
 // Then we crop the requested size, and center to the center of the image
 const crop = async(client, params) => {
+  // Resize the image to fit within the bounding box
+  // The ^ ensures the images is resized while maintaining the ratio
+  // However the sizes are treated as minimum values instead of maximum values
   client = client.resize(params.width, params.height, '^');
   const tmpFile = `/tmp/${uuid.v4()}`;
   try {
@@ -34,6 +37,8 @@ const crop = async(client, params) => {
     return client
       .repage(size.width, size.height, 0, 0)
       .gravity('Center')
+      // Crop the image to the exact size (the ! indicates a force)
+      // This is ok since we first resized appropriately
       .crop(params.height, params.width, '!');
   }
   catch (e) {
@@ -64,7 +69,7 @@ const fit = async(client, params) => {
   } else if (params.fit === 'clip') {
     return clip(client, params);
   }
-  return null;
+  throw new Error(`Format '${params.fit}' was accepted but could not be handled`);
 };
 
 // Blur the image if requested in the params

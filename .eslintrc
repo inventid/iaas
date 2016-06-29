@@ -24,8 +24,7 @@
       "templateStrings": true,
       "unicodeCodePointEscapes": true,
       "globalReturn": true,
-      "jsx": true,
-      "experimentalObjectRestSpread": true
+      "jsx": true
     }
   },
   "env": {
@@ -33,9 +32,13 @@
     "node": true,
     "es6": true
   },
-  "plugins": ["async-await"],
   "rules": {
-    "async-await/space-after-async": 2,
-    "async-await/space-after-await": 2
-  }
+    "async-await/space-after-async": 0,
+    "async-await/space-after-await": 2,
+    "strict": 0
+  },
+  "plugins": [
+    "async-await"
+  ],
+  "parser": "babel-eslint"
 }

@@ -6,27 +6,27 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     apt-get clean
 
-RUN npm install -g pm2 babel-cli babel-preset-es2015
+RUN npm install -g pm2 babel-cli babel-preset-es2015 babel-preset-stage-3
 
 # Export the database, originals dir and the config dir
-RUN mkdir /opt/live-image-resize
-RUN mkdir /opt/live-image-resize/migrations
-RUN mkdir /opt/live-image-resize/config
+RUN mkdir /opt/iaas
+RUN mkdir /opt/iaas/migrations
+RUN mkdir /opt/iaas/config
 RUN mkdir /opt/images
-VOLUME ["/opt/images", "/opt/live-image-resize/config"]
+VOLUME ["/opt/images", "/opt/iaas/config"]
 
 EXPOSE 1337
 
 # Add the dependencies
-ADD .babelrc /opt/live-image-resize/
-ADD package.json /opt/live-image-resize/package.json
-RUN cd /opt/live-image-resize && npm install
+ADD .babelrc /opt/iaas/
+ADD package.json /opt/iaas/package.json
+RUN cd /opt/iaas && npm install
 
 # Add the application
-ADD src/*.js /opt/live-image-resize/src/
-ADD migrations /opt/live-image-resize/migrations/
-RUN cd /opt/live-image-resize/src && babel -d ../ *.js
+ADD src/*.js /opt/iaas/src/
+ADD migrations /opt/iaas/migrations/
+RUN cd /opt/iaas/src && babel -d ../ *.js
 
 # Run the entire thing!
-WORKDIR /opt/live-image-resize
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=2"]
+WORKDIR /opt/iaas
+CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=1"]

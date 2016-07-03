@@ -6,7 +6,7 @@ export default (db) => {
     return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
   };
   return {
-    getFromCache: async(params) => {
+    async getFromCache (params) {
       const vars = [params.name,
         params.width,
         params.height,
@@ -24,11 +24,11 @@ export default (db) => {
         // Cache miss
         return null;
       } catch (e) {
-        console.log(e.stack);
+        console.error(e.stack);
         return null;
       }
     },
-    addToCache: async(params, url) => {
+    async addToCache (params, url) {
       const vars = [params.name,
         params.width,
         params.height,
@@ -42,7 +42,7 @@ export default (db) => {
         const result = await promiseQuery(insertImage, vars);
         return result.rowCount === 1;
       } catch (e) {
-        console.log(e.stack);
+        console.error(e.stack);
         return false;
       }
     }

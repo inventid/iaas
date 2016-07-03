@@ -4,7 +4,7 @@ export function futureDate() {
   return cacheDate;
 }
 
-export function isNotUndefined(values) {
+export function areAllDefined(values) {
   const reducer = (val, e) => val && e !== undefined;
   return values.reduce(reducer, true);
 }

@@ -11,7 +11,7 @@ AWS.config.update({
 });
 const S3 = new AWS.S3();
 
-const uploadPromise = (client, params) => {
+const upload = (client, params) => {
   return new Promise((resolve, reject) => client.putObject(params, err => err ? reject(err) : resolve()));
 };
 
@@ -27,7 +27,7 @@ export default (cache) => async(name, params, data) => {
     CacheControl: 'public'
   };
   try {
-    await uploadPromise(S3, uploadParams);
+    await upload(S3, uploadParams);
   } catch (e) {
     log('error', `AWS upload error: ${JSON.stringify(e)}`);
     return;

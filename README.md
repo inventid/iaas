@@ -129,9 +129,10 @@ On OSX the Docker Toolbox suffices.
 Quick way to send images (ensure you have `jq` installed)
 ```bash
 IMAGE=test1234567
-RES=`curl -vvv -XPOST http://192.168.99.100:1337/token -d "{\"id\": \"${IMAGE}\"}" -H "Content-Type: application/json"`
+PORT=1337
+RES=`curl -vvv -XPOST http://localhost:$PORT/token -d "{\"id\": \"${IMAGE}\"}" -H "Content-Type: application/json"`
 TOKEN=`echo $RES | jq -r .token`
-curl -vvv -XPOST http://192.168.99.100:1337/${IMAGE} -H "X-Token: ${TOKEN}" -F "image=@/Users/Rogier/Downloads/878261728-5f264338.jpg"
+curl -vvv -XPOST http://localhost:$PORT/${IMAGE} -H "X-Token: ${TOKEN}" -F "image=@/Users/Rogier/Downloads/IMG_7419.PNG"
 ```
 
 ## Contributing

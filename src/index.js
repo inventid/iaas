@@ -8,13 +8,14 @@ import log from "./log";
 import urlParameters from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
-import {isNotUndefined} from "./helper";
+import {areAllDefined} from "./helper";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
 
 process.on('uncaughtException', function (err) {
-  console.log(err);
+  console.error(err);
+  process.exit(1);
 });
 
 const promiseUpload = (form, request) => {
@@ -26,7 +27,7 @@ const cropParametersOnUpload = (req) => {
   const yOffset = Number(req.query.y) || undefined;
   const width = Number(req.query.width) || undefined;
   const height = Number(req.query.height) || undefined;
-  if (isNotUndefined([xOffset, yOffset, width, height])) {
+  if (areAllDefined([xOffset, yOffset, width, height])) {
     return {
       xOffset, yOffset, width, height
     };
@@ -57,7 +58,7 @@ const uploadImage = async(req, res) => {
     status: 'OK',
     id: name,
     original_height: result.originalHeight,
-    original_width: result.originalWidth,
+    original_width: result.originalWidth
   });
 };
 
@@ -101,7 +102,7 @@ server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original
-  const params = urlParameters(req);
+  const params = urlParameters(req, false);
   imageResponse.original(db, params, req.method, res);
 });
 

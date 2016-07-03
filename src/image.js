@@ -6,11 +6,13 @@ import uuid from "uuid";
 
 const im = gm.subClass({imageMagick: true});
 
+const clearTempfilesTimeout = 60000; // 1 minute
+
 // Wrap these calls in promises so we can use async/await
-const promiseWrite = (client, file) => {
+const write = (client, file) => {
   return new Promise((resolve, reject) => client.write(file, err => err ? reject(err) : resolve()));
 };
-const promiseSize = (client) => {
+const size = (client) => {
   return new Promise((resolve, reject) => client.size((err, data) => err ? reject(err) : resolve(data)));
 };
 
@@ -31,11 +33,12 @@ const crop = async(client, params) => {
   client = client.resize(params.width, params.height, '^');
   const tmpFile = `/tmp/${uuid.v4()}`;
   try {
-    await promiseWrite(client, tmpFile);
+    await write(client, tmpFile);
     client = im(tmpFile);
-    const size = await promiseSize(client);
+    const imgSize = await size(client);
+    setTimeout(() => fs.unlink(tmpFile), clearTempfilesTimeout);
     return client
-      .repage(size.width, size.height, 0, 0)
+      .repage(imgSize.width, imgSize.height, 0, 0)
       .gravity('Center')
       // Crop the image to the exact size (the ! indicates a force)
       // This is ok since we first resized appropriately
@@ -44,6 +47,7 @@ const crop = async(client, params) => {
   catch (e) {
     log('error', 'could not write tempfile');
     console.error(e.stack);
+    throw e;
   }
 };
 
@@ -92,23 +96,23 @@ export default {
     // if possible, crop first (since the UA had that orientation), then orient
     if (cropParameters) {
       const cropped = im(source).crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
-      await promiseWrite(cropped, source);
+      await write(cropped, source);
     }
 
     const oriented = im(source).autoOrient();
 
     try {
-      await promiseWrite(oriented, destination);
+      await write(oriented, destination);
     } catch (e) {
       console.log(e.stack);
-      return;
+      throw e;
     }
 
     try {
-      const size = await promiseSize(im(destination));
+      const imgSize = await size(im(destination));
       return {
-        originalHeight: size.height || null,
-        originalWidth: size.width || null
+        originalHeight: imgSize.height || null,
+        originalWidth: imgSize.width || null
       };
     } catch (e) {
       console.log(e.stack);

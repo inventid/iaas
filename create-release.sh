@@ -2,7 +2,7 @@
 
 set -e
 
-echo "This script will create a live-image-resizer release, based of the current 'develop' branch."
+echo "This script will create a IAAS release, based of the current 'develop' branch."
 echo "Press Ctrl-C to cancel"
 echo
 
@@ -26,7 +26,7 @@ git tag -a $VERSION -m "Public release of version ${VERSION}"
 git push > /dev/null
 git push --tags > /dev/null
 
-echo "Version ${VERSION} was successfully released. On Github you can complete the release: https://github.com/inventid/live-image-resize/releases/tag/${VERSION}"
+echo "Version ${VERSION} was successfully released. On Github you can complete the release: https://github.com/inventid/iaas/releases/tag/${VERSION}"
 git checkout develop > /dev/null
 exit 0
 

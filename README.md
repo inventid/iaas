@@ -1,10 +1,10 @@
 # Live Image Resize
 
-[![Code Climate](https://codeclimate.com/github/inventid/live-image-resize/badges/gpa.svg)](https://codeclimate.com/github/inventid/live-image-resize)
-[![Dependency Status](https://gemnasium.com/inventid/live-image-resize.svg)](https://gemnasium.com/inventid/live-image-resize)
+[![Code Climate](https://codeclimate.com/github/inventid/iaas/badges/gpa.svg)](https://codeclimate.com/github/inventid/iaas)
+[![Dependency Status](https://gemnasium.com/inventid/iaas.svg)](https://gemnasium.com/inventid/iaas)
 
-[![Docker downloads](https://img.shields.io/docker/pulls/inventid/live-image-resize.svg)](https://registry.hub.docker.com/u/inventid/live-image-resize/)
-[![GitHub license](https://img.shields.io/github/license/inventid/live-image-resize.svg)](https://github.com/inventid/live-image-resize/blob/master/LICENSE)
+[![Docker downloads](https://img.shields.io/docker/pulls/inventid/iaas.svg)](https://registry.hub.docker.com/u/inventid/iaas/)
+[![GitHub license](https://img.shields.io/github/license/inventid/iaas.svg)](https://github.com/inventid/iaas/blob/master/LICENSE)
 
 ## What is it?
 
@@ -12,16 +12,22 @@ The need to show user generated content is growing on the web.
 However, different clients (mobile apps, or a web client) might need these images in other resolutions.
 Converting these every single time is time-consuming and inefficient.
 
-Therefore this live image resizer, a joint project between [inventid](https://www.inventid.nl) and [Magnet.me](https://magnet.me), attempts to circumvent these issues.
+Therefore we present iaas, Imaging-As-A-Service, a joint project between [inventid](https://www.inventid.nl) and [Magnet.me](https://magnet.me).
 
 ## How does it work?
+
+### Requesting
 
 A client can simply request an image, and specify the maximum height, width, and a format (e.g. `/sfsdf_1040_1040.png`).
 To support Apple's retina solution, this can be suffixed with an upscale parameter, e.g. `/sfsdf_1040_1040_2x.png` (but also `_13x` for future use).
 A quick check is made whether this image was previously scaled to that resolution.
 
 If yes, a redirect is given to the cache location of that image (currently AWS S3).
-Otherwise the image is resized live, and served directly to the client, the cached version is uploaded to AWS S3.
+Otherwise the image is resized live, and served directly to the client, while a new cached version is uploaded to AWS S3.
+
+The resize honours the aspect ratio, hence the image is scaled to the maximum size given in the boundary box (which is in the request).
+
+### Uploading
 
 Adding images is equally simple.
 A client can simply post an image, accompanied by a token.
@@ -29,6 +35,19 @@ These tokens can be requested from a `POST` on `/token` (which you should firewa
 That token is then valid once, so your client can upload the file directly, without having it to go through your own application (except for the identifier probably).
 
 Logging takes place in a JSON Logstash enabled format, so it's easy to get into Logstash and Kibana. Great for logging!
+
+### Options
+
+Additional options can be given when requesting or uploading images.
+All options for requesting are chainable.
+
+| Option | Usage | Effect |
+|---|---|---|
+| Originals | GET `/example.jpg` | The original image is served. No blurring or cropping will be applied |
+| Cropping | GET `/example_100_100.jpg?fit=crop` | The image is cropped to the resolution, the result is an exact match for the resolution. Images are cropped to the center |
+| Blurring | GET `/example_100_100.jpg?blur=true` | The image is blurred slightly |
+| Crop on upload | POST `/example.jpg?x=30&y=40&width=100&height=200` | The image original is saved after cropping by the suggested parameters |
+
 
 ## How to use
 
@@ -94,26 +113,6 @@ Be sure to keep this data and backup it.
 You can also use the config to let it point to another directory.
 In that case, ensure the user can write there!
 
-### Migrating from versions < 1.0.0 to 1.0.0
-
-Due to the change from sqlite to postgresql, you will need to do a little migration:
-
-1. Create a postgresql database on your server
-1. Execute the first two migrations to create the database structure
-1. Create the pg-migration tables `CREATE TABLE dbchangelog(id bigint, datetime timestamp with time zone);CREATE UNIQUE index changeset on dbchangelog(id);`
-1. Add the first two ids to the table
-1. Add the `postgresql` section to your config file
-1. Disable uploading of images
-1. Dump your current database `sqlite3 /opt/live-image-resize/cache.sqlite .dump > /tmp/image.sql`
-1. Move this file to your database server. Delete any schema related lines (`CREATE TABLE` or `CREATE INDEX`).
-1. Import the dataset by using `cat /tmp/image.sql | sudo -u postgres psql imageresizer`
-1. Set the table owner to your user `ALTER TABLE dbchangelog OWNER TO imageresizer; ALTER TABLE tokens OWNER TO imageresizer; ALTER TABLE images OWNER TO imageresizer;`
-1. Pull the new Docker container
-1. Restart the container (the final changeset will be applied).
-1. Re-enable your uploads
-
-That's it!
-
 ## Developing
 
 Developing is relatively easy, once you know how it works.
@@ -130,15 +129,16 @@ On OSX the Docker Toolbox suffices.
 Quick way to send images (ensure you have `jq` installed)
 ```bash
 IMAGE=test1234567
-RES=`curl -vvv -XPOST http://192.168.99.100:1337/token -d "{\"id\": \"${IMAGE}\"}" -H "Content-Type: application/json"`
+PORT=1337
+RES=`curl -vvv -XPOST http://localhost:$PORT/token -d "{\"id\": \"${IMAGE}\"}" -H "Content-Type: application/json"`
 TOKEN=`echo $RES | jq -r .token`
-curl -vvv -XPOST http://192.168.99.100:1337/${IMAGE}.jpg -H "X-Token: ${TOKEN}" -F "image=@/Users/Rogier/Downloads/878261728-5f264338.jpg"
+curl -vvv -XPOST http://localhost:$PORT/${IMAGE} -H "X-Token: ${TOKEN}" -F "image=@/Users/Rogier/Downloads/IMG_7419.PNG"
 ```
 
 ## Contributing
 
 You can use the `Dockerfile` to quickly stage stuff locally (on OSX use `docker-machine`).
 
-If you have additions for the code, please [fork the repo](https://github.com/inventid/live-image-resize/fork) and open a Pull Request.
+If you have additions for the code, please [fork the repo](https://github.com/inventid/iaas/fork) and open a Pull Request.
 
-![Main developing companies](https://github.com/inventid/live-image-resize/blob/develop/images/example?raw=true)
+![Main developing companies](https://github.com/inventid/iaas/blob/develop/images/example?raw=true)

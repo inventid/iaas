@@ -5,9 +5,6 @@ node_modules/
 *.jpg
 *.jpeg
 
-// Ignore the database file
-cache.db
-
 // Ignore our secret settings
 config/default.json
 

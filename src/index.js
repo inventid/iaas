@@ -78,17 +78,17 @@ server.use((req, res, next) => {
 server.get('/_health', (req, res) => {
   if (db) {
     res.status(200).end('OK');
-    log('info', 'healthcheck OK');
+    log('info', 'Healthcheck OK');
   } else {
     res.status(500).end('No database connection');
-    log('error', 'healthcheck FAILED');
+    log('error', 'Healthcheck FAILED');
   }
 });
 server.get('/robots.txt', (req, res) => {
   const content = (config.has('allow_indexing') && config.get('allow_indexing')) ?
     "User-agent: *\nAllow: /" : "User-agent: *\nDisallow: /";
   res.status(200).end(content);
-  log('info', 'robots.txt served');
+  log('info', 'Robots.txt served');
 });
 
 // The actual endpoints for fetching
@@ -131,7 +131,7 @@ server.post('/(:name)', uploadImage);
 
 pg.connect(connectionString, (err, client) => {
   if (err) {
-    log('error', `error fetching client from pool: ${err}`);
+    log('error', `Error fetching client from pool: ${err}`);
   } else {
     db = client;
     migrateAndStart(db, './migrations', () => {

@@ -110,7 +110,7 @@ export default {
     }
 
     // Image is present but not in the correct setting
-    log('info', `Cache mis for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+    log('info', `Cache miss for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
     sendFoundHeaders(params, response);
 
     const browserImage = await image.magic(imagePath(params.name), params, response);

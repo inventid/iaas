@@ -19,6 +19,7 @@ git pull > /dev/null
 echo "Whats the version number associated with this release? Type the version number followed by [enter]. "
 read VERSION
 
+npm version $VERSION
 git checkout master > /dev/null
 git pull > /dev/null
 git rebase develop > /dev/null

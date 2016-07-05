@@ -40,7 +40,7 @@ const uploadImage = async(req, res) => {
   const name = req.params.name;
   log('info', `Requested image upload for image_id ${name} with token ${sentToken}`);
 
-  const canConsumeToken = token(db).consume(sentToken, name);
+  const canConsumeToken = await token(db).consume(sentToken, name);
   if (!canConsumeToken) {
     res.status(403).end();
     return;

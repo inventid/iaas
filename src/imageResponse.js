@@ -56,7 +56,6 @@ const redirectImageToWithinBounds = (params, response) => {
 };
 
 const redirectToCachedEntity = (cacheUrl, params, response) => {
-  log('info', `cache hit for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
   response.status(307).set({
     'Location': cacheUrl,
     'Cache-Control': 'public',
@@ -101,17 +100,17 @@ export default {
       response.status(200).end();
       return;
     }
-    log('info', `Requesting file ${params.name} in ${params.type} format in a ${params.width}x${params.height}px resolution`); //eslint-disable-line max-len
+    log('info', `Request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
 
     const cacheValue = await cache.getFromCache(params);
     if (cacheValue) {
-      log('info', `Cache hit for ${params.name} in ${params.type} format in a ${params.width}x${params.height}px resolution`); //eslint-disable-line max-len
+      log('info', `Cache hit for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
       redirectToCachedEntity(cacheValue, params, response);
       return;
     }
 
     // Image is present but not in the correct setting
-    log('info', `Cache miss for ${params.name} in ${params.type} format in a ${params.width}x${params.height}px resolution`); //eslint-disable-line max-len
+    log('info', `Cache mis for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
     sendFoundHeaders(params, response);
 
     const browserImage = await image.magic(imagePath(params.name), params, response);

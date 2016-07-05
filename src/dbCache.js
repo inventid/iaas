@@ -1,6 +1,6 @@
 import log from "./log";
 
-const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url, blur) VALUES ($1,$2,$3,$4,$5,$6,$7)';
+const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url, blur, rendered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)';
 const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5 AND blur=$6';
 
 export default (db) => {
@@ -37,7 +37,8 @@ export default (db) => {
         params.fit,
         params.mime,
         url,
-        Boolean(params.blur)
+        Boolean(params.blur),
+        new Date()
       ];
 
       try {

@@ -20,6 +20,9 @@ echo "Whats the version number associated with this release? Type the version nu
 read VERSION
 
 npm version $VERSION
+git add package.json
+git commit -m "Release of ${VERSION}"
+git push
 git checkout master > /dev/null
 git pull > /dev/null
 git rebase develop > /dev/null

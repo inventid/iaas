@@ -44,7 +44,7 @@ const crop = async(client, params) => {
       .gravity('Center')
       // Crop the image to the exact size (the ! indicates a force)
       // This is ok since we first resized appropriately
-      .crop(params.height, params.width, '!');
+      .crop(params.width, params.height, '!');
   } catch (e) {
     log('error', 'could not write tempfile');
     log('error', e.stack);

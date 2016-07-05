@@ -50,7 +50,7 @@ const isHeadRequest = method => (method === 'HEAD');
 
 const redirectImageToWithinBounds = (params, response) => {
   return response.status(307).set({
-    'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.',
+    'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.', //eslint-disable-line max-len
     'Location': `/${params.name}_${params.width}_${params.height}.${params.type}?fit=${params.fit}&blur=${Boolean(params.blur)}`
   }).end();
 };
@@ -80,29 +80,34 @@ export default {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
-      return response.status(400).end();
+      response.status(400).end();
+      return;
     }
 
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
-      return response.status(404).end();
+      response.status(404).end();
+      return;
     }
 
     // Image exists
     if (!isRequestedImageWithinBounds(params)) {
-      return redirectImageToWithinBounds(calculateNewBounds(params), response);
+      redirectImageToWithinBounds(calculateNewBounds(params), response);
+      return;
     }
 
     // Image exists and is within bounds
     if (isHeadRequest(method)) {
-      return response.status(200).end();
+      response.status(200).end();
+      return;
     }
     log('info', `Requesting file ${params.name} in ${params.type} format in a ${params.width}x${params.height}px resolution`); //eslint-disable-line max-len
 
     const cacheValue = await cache.getFromCache(params);
     if (cacheValue) {
       log('info', `Cache hit for ${params.name} in ${params.type} format in a ${params.width}x${params.height}px resolution`); //eslint-disable-line max-len
-      return redirectToCachedEntity(cacheValue, params, response);
+      redirectToCachedEntity(cacheValue, params, response);
+      return;
     }
 
     // Image is present but not in the correct setting
@@ -129,7 +134,8 @@ export default {
   original: async function (db, params, method, response) {
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
-      return response.status(404).end();
+      response.status(404).end();
+      return;
     }
     response.status(200).set({
       'Content-Type': params.mime,

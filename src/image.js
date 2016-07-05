@@ -1,12 +1,14 @@
 require("babel-polyfill");
 
+import fs from "fs";
 import gm from "gm";
 import log from "./log";
 import uuid from "uuid";
 
 const im = gm.subClass({imageMagick: true});
 
-const clearTempfilesTimeout = 60000; // 1 minute
+// 10 seconds
+const clearTempfilesTimeout = 10000;
 
 // Wrap these calls in promises so we can use async/await
 const write = (client, file) => {
@@ -43,10 +45,9 @@ const crop = async(client, params) => {
       // Crop the image to the exact size (the ! indicates a force)
       // This is ok since we first resized appropriately
       .crop(params.height, params.width, '!');
-  }
-  catch (e) {
+  } catch (e) {
     log('error', 'could not write tempfile');
-    console.error(e.stack);
+    log('error', e.stack);
     throw e;
   }
 };
@@ -104,7 +105,7 @@ export default {
     try {
       await write(oriented, destination);
     } catch (e) {
-      console.log(e.stack);
+      log('error', e.stack);
       throw e;
     }
 
@@ -115,11 +116,11 @@ export default {
         originalWidth: imgSize.width || null
       };
     } catch (e) {
-      console.log(e.stack);
+      log('error', e.stack);
       return {
         originalHeight: null,
         originalWidth: null
-      }
+      };
     }
   }
 };

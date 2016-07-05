@@ -14,7 +14,7 @@ let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
 
 process.on('uncaughtException', function (err) {
-  console.error(err);
+  log('error', err);
   process.exit(1);
 });
 
@@ -42,19 +42,21 @@ const uploadImage = async(req, res) => {
 
   const canConsumeToken = token(db).consume(sentToken, name);
   if (!canConsumeToken) {
-    return res.status(403).json()
+    res.status(403).end();
+    return;
   }
 
   // Valid token
   const form = new formidable.IncomingForm();
   const files = await promiseUpload(form, req);
   if (!files.image || !files.image.path) {
-    return res.status(400).end();
+    res.status(400).end();
+    return;
   }
   const cropParameters = cropParametersOnUpload(req);
   const result = await imageResponse.upload(name, files.image.path, cropParameters);
   log('info', `Finished writing original file ${name}`);
-  return res.json({
+  res.json({
     status: 'OK',
     id: name,
     original_height: result.originalHeight,
@@ -111,13 +113,15 @@ server.post('/token', async(req, res) => {
   // Create a token
   const image = req.body.id;
   if (image === null) {
-    return res.status(400).end();
+    res.status(400).end();
+    return;
   }
   const tokenBackend = token(db);
   const newToken = await tokenBackend.createToken(image);
   if (!newToken) {
     // Duplicate
-    return res.status(403).json({error: 'The requested image_id is already requested'});
+    res.status(403).json({error: 'The requested image_id is already requested'});
+    return;
   }
   res.json({token: newToken});
 });

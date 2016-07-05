@@ -8,5 +8,4 @@ build:
     - node -v
     - npm -v
     - npm install
-    - node ./node_modules/eslint/bin/eslint.js src
-
+    - npm run eslint

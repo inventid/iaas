@@ -32,7 +32,7 @@ export default (db) => {
         return newToken;
       } catch (e) {
         // Duplicate for the id
-        console.log(e.stack);
+        log('error', e.stack);
         return null;
       }
     },
@@ -42,9 +42,9 @@ export default (db) => {
         const result = await promiseQuery(consumeToken, vars);
         return result.rowCount === 1;
       } catch (e) {
-        console.log(e.stack);
+        log('error', e.stack);
         return false;
       }
     }
-  }
-}
+  };
+};

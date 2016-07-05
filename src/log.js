@@ -6,4 +6,4 @@ export default (level, message) => {
     message: message
   };
   console.log(JSON.stringify(obj));  //eslint-disable-line no-console
-}
+};

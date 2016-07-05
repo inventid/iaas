@@ -37,9 +37,13 @@ export default (cache) => async(name, params, data) => {
   const url = `${config.get('aws.bucket_url')}/${name}`;
 
   try {
-    await cache.addToCache(params, url);
-    log('info', 'Image was added to cache');
+    const addedSuccessfully = await cache.addToCache(params, url);
+    if (addedSuccessfully) {
+      log('info', 'Image was added to cache');
+    } else {
+      log('warn', 'Image could not be added to cache');
+    }
   } catch (e) {
     log('error', e);
   }
-}
+};

@@ -1,7 +1,8 @@
 import {areAllDefined} from "./helper";
+import log from "./log";
 
-const BLUR_RADIUS = Number(process.env.BLUR_RADIUS) || 15;
-const BLUR_SIGMA = Number(process.env.BLUR_SIGMA) || 7;
+const BLUR_RADIUS = Number(process.env.BLUR_RADIUS) || 15; //eslint-disable-line no-process-env
+const BLUR_SIGMA = Number(process.env.BLUR_SIGMA) || 7; //eslint-disable-line no-process-env
 
 const ALLOWED_TYPES = ['jpg', 'jpeg', 'jfif', 'jpe', 'png'];
 const ALLOWED_FITS = ['clip', 'crop', 'canvas'];
@@ -49,13 +50,13 @@ export default (req, requireDimensions = true) => {
     result.blur = {
       radius: BLUR_RADIUS,
       sigma: BLUR_SIGMA
-    }
+    };
   }
 
   // Check if the minimum is set
   if (!result.name || (!requireDimensions && areAllDefined([result.width, result.height]))) {
-    console.warn(result, req.params, req.query);
+    log('warn', `${result}, ${req.params}, ${req.query}`);
     return null;
   }
   return result;
-}
+};

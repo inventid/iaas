@@ -20,17 +20,14 @@ echo "Whats the version number associated with this release? Type the version nu
 read VERSION
 
 npm version $VERSION
-git add package.json
-git commit -m "Release of ${VERSION}"
 git push
 git checkout master > /dev/null
 git pull > /dev/null
 git rebase develop > /dev/null
-git tag -a $VERSION -m "Public release of version ${VERSION}"
 git push > /dev/null
 git push --tags > /dev/null
 
-echo "Version ${VERSION} was successfully released. On Github you can complete the release: https://github.com/inventid/iaas/releases/tag/${VERSION}"
+echo "Version ${VERSION} was successfully released. On Github you can complete the release: https://github.com/inventid/iaas/releases/tag/v${VERSION}"
 git checkout develop > /dev/null
 exit 0
 

@@ -134,6 +134,7 @@ export default {
     });
   },
   original: async function (db, params, method, response) {
+    const startTime = new Date();
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
@@ -147,6 +148,7 @@ export default {
     });
     const data = await fs.readFile(imagePath(params.name));
     response.end(data);
+    log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);  //eslint-disable-line max-len
   },
   upload: async function (name, path, cropParameters) {
     const destinationPath = `${config.get('originals_dir')}/${name}`;

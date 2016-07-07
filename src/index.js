@@ -22,11 +22,20 @@ const promiseUpload = (form, request) => {
   return new Promise((resolve, reject) => form.parse(request, (err, fields, files) => err ? reject(err) : resolve(files)));
 };
 
+const getValidDimensionParameter = (value) => {
+  // Convert to a number and drop the decimals
+  const number = ~~Number(value);
+  if (isNaN(number) || number < 0) {
+    return undefined;
+  }
+  return number;
+};
+
 const cropParametersOnUpload = (req) => {
-  const xOffset = Number(req.query.x) || undefined;
-  const yOffset = Number(req.query.y) || undefined;
-  const width = Number(req.query.width) || undefined;
-  const height = Number(req.query.height) || undefined;
+  const xOffset = getValidDimensionParameter(req.query.x);
+  const yOffset = getValidDimensionParameter(req.query.y);
+  const width = getValidDimensionParameter(req.query.width);
+  const height = getValidDimensionParameter(req.query.height);
   if (areAllDefined([xOffset, yOffset, width, height])) {
     return {
       xOffset, yOffset, width, height

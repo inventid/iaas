@@ -97,7 +97,12 @@ export default {
     // if possible, crop first (since the UA had that orientation), then orient
     if (cropParameters) {
       const cropped = im(source).crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
-      await write(cropped, source);
+      try {
+        await write(cropped, source);
+      } catch (e) {
+        log('error', e.stack);
+        throw e;
+      }
     }
 
     const oriented = im(source).autoOrient();

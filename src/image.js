@@ -62,7 +62,7 @@ const clip = async(client, params) => {
 // white.
 const canvas = async(client, params) => {
   client = await clip(client, params);
-  return client.gravity('Center').extent(params.height, params.width);
+  return client.gravity('Center').extent(params.width, params.height);
 };
 
 // Fit the image appropriately.

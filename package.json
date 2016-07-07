@@ -1,6 +1,6 @@
 {
   "name": "iaas",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "ImageMagick as a HTTP service, using AWS S3 to store caches",
   "main": "src/index.js",
   "dependencies": {

@@ -59,7 +59,7 @@ const redirectToCachedEntity = (cacheUrl, params, response) => {
   response.status(307).set({
     'Location': cacheUrl,
     'Cache-Control': 'public',
-    'Expires': futureDate
+    'Expires': futureDate()
   }).end();
   response.end();
 };

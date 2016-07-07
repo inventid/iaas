@@ -113,19 +113,22 @@ export default {
     log('info', `Cache miss for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
     sendFoundHeaders(params, response);
 
+    const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
     browserImage.stream(params.type, (err, stdout) => {
       const r = stdout.pipe(response);
       r.on('finish', () => {
-        // This is to close the result while a background job will continue to process
-        log('info', 'Finished sending a converted image');
+        log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        // This is to close the response while a background job will continue to process
         response.end();
       });
     });
 
+    const awsStartTime = new Date();
     const awsImage = await image.magic(imagePath(params.name), params, response);
     awsImage.toBuffer(params.type, (err, stream) => {
       if (!err) {
+        log('info', `Creating AWS image took ${new Date() - awsStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
         aws(cache)(imageKey(params), params, stream);
       }
     });

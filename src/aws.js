@@ -26,20 +26,22 @@ export default (cache) => async(name, params, data) => {
     // We let any intermediate server cache this result as well
     CacheControl: 'public'
   };
+
+  const startTime = new Date();
   try {
     await upload(S3, uploadParams);
   } catch (e) {
     log('error', `AWS upload error: ${JSON.stringify(e)}`);
     return;
   }
+  log('info', `Uploading ${name} to AWS image took ${new Date() - startTime}ms`);
 
-  log('info', `Uploading of ${name} went very well`);
   const url = `${config.get('aws.bucket_url')}/${name}`;
 
   try {
     const addedSuccessfully = await cache.addToCache(params, url);
     if (addedSuccessfully) {
-      log('info', 'Image was added to cache');
+      log('info', `Image ${name} was added to cache`);
     } else {
       log('warn', 'Image could not be added to cache');
     }

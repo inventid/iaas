@@ -56,16 +56,16 @@ const redirectImageToWithinBounds = (params, response) => {
 };
 
 const redirectToCachedEntity = (cacheUrl, params, response) => {
+  // We redirect the user to the new location. The 307 ensures future requests come in to this service anyway
+  // 307 redirects are not cached by browsers
   response.status(307).set({
-    'Location': cacheUrl,
-    'Cache-Control': 'public',
-    'Expires': futureDate
+    'Location': cacheUrl
   }).end();
   response.end();
 };
 
 const sendFoundHeaders = (params, response) => {
-  // Get the image and resize it
+  // Get the image and resize it. We allow any intermediate servers and browsers to use this cached resource as well
   response.status(200).type(params.mime).set({
     'Expires': futureDate(),
     'Cache-Control': 'public'
@@ -95,9 +95,11 @@ export default {
       return;
     }
 
-    // Image exists and is within bounds
+    // Image exists and is within bounds.
+    // This method is mainly used by browsers to serve retina images
     if (isHeadRequest(method)) {
       response.status(200).end();
+      log('info', `HEAD request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}) can be served`);  //eslint-disable-line max-len
       return;
     }
     log('info', `Request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len

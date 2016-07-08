@@ -18,5 +18,8 @@
   "constraints": {
     "max_width": 2000,
     "max_height": 2000
+  },
+  "log": {
+    "debug": false
   }
 }

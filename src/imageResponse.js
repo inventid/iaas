@@ -102,7 +102,7 @@ export default {
       log('info', `HEAD request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}) can be served`);  //eslint-disable-line max-len
       return;
     }
-    log('info', `Request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+    log('debug', `Request for ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
 
     const cacheValue = await cache.getFromCache(params);
     if (cacheValue) {

@@ -16,9 +16,12 @@ const upload = (client, params) => {
 };
 
 export default (cache) => async(name, params, data) => {
+  // See https://github.com/inventid/iaas/issues/78
+  const renderedAt = new Date();
+  const savedName = `${renderedAt.toISOString()}_${name}`;
   const uploadParams = {
     Bucket: config.get('aws.bucket'),
-    Key: name,
+    Key: savedName,
     ACL: 'public-read',
     Body: data,
     Expires: futureDate(),
@@ -36,10 +39,10 @@ export default (cache) => async(name, params, data) => {
   }
   log('info', `Uploading ${name} to AWS image took ${new Date() - startTime}ms`);
 
-  const url = `${config.get('aws.bucket_url')}/${name}`;
+  const url = `${config.get('aws.bucket_url')}/${savedName}`;
 
   try {
-    const addedSuccessfully = await cache.addToCache(params, url);
+    const addedSuccessfully = await cache.addToCache(params, url, renderedAt);
     if (addedSuccessfully) {
       log('info', `Image ${name} was added to cache`);
     } else {

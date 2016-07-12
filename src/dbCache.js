@@ -30,7 +30,7 @@ export default (db) => {
         return null;
       }
     },
-    async addToCache(params, url) {
+    async addToCache(params, url, renderedAt) {
       const vars = [params.name,
         params.width,
         params.height,
@@ -38,7 +38,7 @@ export default (db) => {
         params.mime,
         url,
         Boolean(params.blur),
-        new Date()
+        renderedAt
       ];
 
       try {

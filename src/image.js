@@ -88,9 +88,9 @@ const blur = async(client, params) => {
 export default {
   magic: async function (file, params) {
     let client = im(file);
-    client = await interlace(client, params);
     client = await fit(client, params);
     client = await blur(client, params);
+    client = await interlace(client, params);
     return client;
   },
   writeOriented: async function (source, destination, cropParameters) {

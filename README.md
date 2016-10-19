@@ -114,6 +114,24 @@ Be sure to keep this data and backup it.
 You can also use the config to let it point to another directory.
 In that case, ensure the user can write there!
 
+### Clearing the AWS caches
+
+Sometimes you want to be able to clear cached images, because e.g. a new instance will fix a bug.
+
+You can do this easily by gradually removing the cached links from the database.
+In that case, the image is simply recomputed and uploaded from the fresh instance.
+
+A command to do this in `psql` is for example
+
+```bash
+sudo -u postgres psql imageresizer -c "DELETE FROM images WHERE ctid IN (SELECT ctid FROM images where rendered_at < '2016-09-01 00:00:00' LIMIT 100);"
+```
+
+By limiting it to 100 images per run, you ensure the instances are not suddenly hit with lots of traffic.
+You can combine the above command with a `screen` and `watch` command to automate the entire cache purge.
+
+Don't forget to set the date correctly ;)
+
 ## Developing
 
 Developing is relatively easy, once you know how it works.

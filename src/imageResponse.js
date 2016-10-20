@@ -12,6 +12,8 @@ const fs = promisify('fs');
 
 const imagePath = (name) => `${config.get('originals_dir')}/${name}`;
 
+const redirectTimeout = config.has('redirect_cache_timeout') ? config.get('redirect_cache_timeout') : 0;
+
 // Determine whether the image exists on disk
 // Returns either true of false
 const doesImageExist = async(name) => {
@@ -56,11 +58,18 @@ const redirectImageToWithinBounds = (params, response) => {
 };
 
 const redirectToCachedEntity = (cacheUrl, params, response) => {
-  // We redirect the user to the new location. The 307 ensures future requests come in to this service anyway
-  // 307 redirects are not cached by browsers
-  response.status(307).set({
+  // We redirect the user to the new location. We issue a temporary redirect such that the
+  // request url stays the representitive url, and because temporary redirects generally
+  // give less issues than permanent redirects for the odd chance that the underlying resource
+  // does actually change
+  const headers = {
     'Location': cacheUrl
-  }).end();
+  };
+  if (redirectTimeout) {
+    headers['Cache-Control'] = `max-age=${redirectTimeout}`;
+  }
+
+  response.status(307).set(headers).end();
   response.end();
 };
 

@@ -20,6 +20,7 @@ EXPOSE 1337
 # Add the dependencies
 ADD .babelrc /opt/iaas/
 ADD package.json /opt/iaas/package.json
+ADD npm-shrinkwrap.json /opt/iaas/npm-shrinkwrap.json
 RUN cd /opt/iaas && npm install
 
 # Add the application

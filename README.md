@@ -92,6 +92,27 @@ NODE_ENV=production node index.js
 
 It will then additionally load the `production.json` file.
 
+The following settings are supported:
+
+key|description
+---|---
+aws.access_key | Access key for AWS
+aws.secret_key | Secret key for AWS
+aws.region | Region of your AWS bucket
+aws.bucket | Name of your AWS bucket
+aws.bucket_url | URL ofyour AWS bucket
+originals_dir | Path to where the original images should be stored
+listen_address | Address on which the server should listen
+postgresql.user | PostgreSQL username
+postgresql.password | PostgresSQL password
+postgresql.host | Host on which the database is running
+postgres.database | Name of your database
+allow_indexing | Whether to allow robots to index the images
+constraints.max_width | The maximum allowed width of the image. If a request is made that succeeds this width then a redirect is issued to an equivalent image within bounds.
+constraints.max_height | The maximum allowed height of the image. If a request is made that succeeds this height then a redirect is issued to an equivalent image within bounds.
+log.[level] | Whether to enable logs generated with the specified level, Where level is one of debug, info, warn or error.
+redirect_cache_timeout | Cache age in seconds of redirects to AWS. This value is used as the max-age in the Cache-Control header
+
 ### Database
 
 To keep the cache links, an additional Postgresql database is used.

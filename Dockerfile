@@ -1,4 +1,4 @@
-FROM node:5.3
+FROM node:6
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
@@ -30,4 +30,4 @@ RUN cd /opt/iaas/src && babel -d ../ *.js
 
 # Run the entire thing!
 WORKDIR /opt/iaas
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=1"]
+CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=3"]

@@ -25,7 +25,7 @@
             "isarray": {
               "version": "1.0.0",
               "from": "isarray@>=1.0.0 <2.0.0",
-              "resolved": "http://npm.internal.magnet.me:4873/isarray/-/isarray-1.0.0.tgz"
+              "resolved": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
             }
           }
         },
@@ -42,7 +42,7 @@
         "querystring": {
           "version": "0.2.0",
           "from": "querystring@0.2.0",
-          "resolved": "http://npm.internal.magnet.me:4873/querystring/-/querystring-0.2.0.tgz"
+          "resolved": "https://registry.npmjs.org/querystring/-/querystring-0.2.0.tgz"
         },
         "sax": {
           "version": "1.1.5",
@@ -57,14 +57,14 @@
             "punycode": {
               "version": "1.3.2",
               "from": "punycode@1.3.2",
-              "resolved": "http://npm.internal.magnet.me:4873/punycode/-/punycode-1.3.2.tgz"
+              "resolved": "https://registry.npmjs.org/punycode/-/punycode-1.3.2.tgz"
             }
           }
         },
         "uuid": {
           "version": "3.0.0",
           "from": "uuid@3.0.0",
-          "resolved": "http://npm.internal.magnet.me:4873/uuid/-/uuid-3.0.0.tgz"
+          "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.0.0.tgz"
         },
         "xml2js": {
           "version": "0.4.15",
@@ -88,7 +88,7 @@
     "babel-polyfill": {
       "version": "6.20.0",
       "from": "babel-polyfill@>=6.13.0 <7.0.0",
-      "resolved": "http://npm.internal.magnet.me:4873/babel-polyfill/-/babel-polyfill-6.20.0.tgz",
+      "resolved": "https://registry.npmjs.org/babel-polyfill/-/babel-polyfill-6.20.0.tgz",
       "dependencies": {
         "core-js": {
           "version": "2.4.1",
@@ -97,13 +97,13 @@
         },
         "babel-runtime": {
           "version": "6.20.0",
-          "from": "babel-runtime@>=6.20.0 <7.0.0",
-          "resolved": "http://npm.internal.magnet.me:4873/babel-runtime/-/babel-runtime-6.20.0.tgz"
+          "from": "babel-runtime@>=6.9.0 <7.0.0",
+          "resolved": "https://registry.npmjs.org/babel-runtime/-/babel-runtime-6.20.0.tgz"
         },
         "regenerator-runtime": {
           "version": "0.10.1",
           "from": "regenerator-runtime@>=0.10.0 <0.11.0",
-          "resolved": "http://npm.internal.magnet.me:4873/regenerator-runtime/-/regenerator-runtime-0.10.1.tgz"
+          "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.10.1.tgz"
         }
       }
     },
@@ -125,12 +125,12 @@
         "debug": {
           "version": "2.2.0",
           "from": "debug@>=2.2.0 <2.3.0",
-          "resolved": "http://npm.internal.magnet.me:4873/debug/-/debug-2.2.0.tgz",
+          "resolved": "https://registry.npmjs.org/debug/-/debug-2.2.0.tgz",
           "dependencies": {
             "ms": {
               "version": "0.7.1",
               "from": "ms@0.7.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ms/-/ms-0.7.1.tgz"
+              "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.1.tgz"
             }
           }
         },
@@ -142,7 +142,7 @@
         "http-errors": {
           "version": "1.5.1",
           "from": "http-errors@>=1.5.0 <1.6.0",
-          "resolved": "http://npm.internal.magnet.me:4873/http-errors/-/http-errors-1.5.1.tgz",
+          "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-1.5.1.tgz",
           "dependencies": {
             "inherits": {
               "version": "2.0.3",
@@ -152,11 +152,11 @@
             "setprototypeof": {
               "version": "1.0.2",
               "from": "setprototypeof@1.0.2",
-              "resolved": "http://npm.internal.magnet.me:4873/setprototypeof/-/setprototypeof-1.0.2.tgz"
+              "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.0.2.tgz"
             },
             "statuses": {
               "version": "1.3.1",
-              "from": "statuses@>=1.3.1 <2.0.0",
+              "from": "statuses@>=1.3.0 <1.4.0",
               "resolved": "https://registry.npmjs.org/statuses/-/statuses-1.3.1.tgz"
             }
           }
@@ -174,14 +174,14 @@
             "ee-first": {
               "version": "1.1.1",
               "from": "ee-first@1.1.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ee-first/-/ee-first-1.1.1.tgz"
+              "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz"
             }
           }
         },
         "qs": {
           "version": "6.2.0",
           "from": "qs@6.2.0",
-          "resolved": "http://npm.internal.magnet.me:4873/qs/-/qs-6.2.0.tgz"
+          "resolved": "https://registry.npmjs.org/qs/-/qs-6.2.0.tgz"
         },
         "raw-body": {
           "version": "2.1.7",
@@ -190,7 +190,7 @@
           "dependencies": {
             "unpipe": {
               "version": "1.0.0",
-              "from": "unpipe@1.0.0",
+              "from": "unpipe@>=1.0.0 <1.1.0",
               "resolved": "https://registry.npmjs.org/unpipe/-/unpipe-1.0.0.tgz"
             }
           }
@@ -198,22 +198,22 @@
         "type-is": {
           "version": "1.6.14",
           "from": "type-is@>=1.6.13 <1.7.0",
-          "resolved": "http://npm.internal.magnet.me:4873/type-is/-/type-is-1.6.14.tgz",
+          "resolved": "https://registry.npmjs.org/type-is/-/type-is-1.6.14.tgz",
           "dependencies": {
             "media-typer": {
               "version": "0.3.0",
               "from": "media-typer@0.3.0",
-              "resolved": "http://npm.internal.magnet.me:4873/media-typer/-/media-typer-0.3.0.tgz"
+              "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz"
             },
             "mime-types": {
               "version": "2.1.13",
               "from": "mime-types@>=2.1.13 <2.2.0",
-              "resolved": "http://npm.internal.magnet.me:4873/mime-types/-/mime-types-2.1.13.tgz",
+              "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.13.tgz",
               "dependencies": {
                 "mime-db": {
                   "version": "1.25.0",
                   "from": "mime-db@>=1.25.0 <1.26.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/mime-db/-/mime-db-1.25.0.tgz"
+                  "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.25.0.tgz"
                 }
               }
             }
@@ -229,7 +229,7 @@
         "json5": {
           "version": "0.4.0",
           "from": "json5@0.4.0",
-          "resolved": "http://npm.internal.magnet.me:4873/json5/-/json5-0.4.0.tgz"
+          "resolved": "https://registry.npmjs.org/json5/-/json5-0.4.0.tgz"
         }
       }
     },
@@ -245,27 +245,27 @@
           "dependencies": {
             "mime-types": {
               "version": "2.1.13",
-              "from": "mime-types@>=2.1.11 <2.2.0",
-              "resolved": "http://npm.internal.magnet.me:4873/mime-types/-/mime-types-2.1.13.tgz",
+              "from": "mime-types@>=2.1.13 <2.2.0",
+              "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.13.tgz",
               "dependencies": {
                 "mime-db": {
                   "version": "1.25.0",
                   "from": "mime-db@>=1.25.0 <1.26.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/mime-db/-/mime-db-1.25.0.tgz"
+                  "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.25.0.tgz"
                 }
               }
             },
             "negotiator": {
               "version": "0.6.1",
               "from": "negotiator@0.6.1",
-              "resolved": "http://npm.internal.magnet.me:4873/negotiator/-/negotiator-0.6.1.tgz"
+              "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-0.6.1.tgz"
             }
           }
         },
         "array-flatten": {
           "version": "1.1.1",
           "from": "array-flatten@1.1.1",
-          "resolved": "http://npm.internal.magnet.me:4873/array-flatten/-/array-flatten-1.1.1.tgz"
+          "resolved": "https://registry.npmjs.org/array-flatten/-/array-flatten-1.1.1.tgz"
         },
         "content-disposition": {
           "version": "0.5.1",
@@ -285,17 +285,17 @@
         "cookie-signature": {
           "version": "1.0.6",
           "from": "cookie-signature@1.0.6",
-          "resolved": "http://npm.internal.magnet.me:4873/cookie-signature/-/cookie-signature-1.0.6.tgz"
+          "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.6.tgz"
         },
         "debug": {
           "version": "2.2.0",
           "from": "debug@>=2.2.0 <2.3.0",
-          "resolved": "http://npm.internal.magnet.me:4873/debug/-/debug-2.2.0.tgz",
+          "resolved": "https://registry.npmjs.org/debug/-/debug-2.2.0.tgz",
           "dependencies": {
             "ms": {
               "version": "0.7.1",
               "from": "ms@0.7.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ms/-/ms-0.7.1.tgz"
+              "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.1.tgz"
             }
           }
         },
@@ -339,12 +339,12 @@
         "fresh": {
           "version": "0.3.0",
           "from": "fresh@0.3.0",
-          "resolved": "http://npm.internal.magnet.me:4873/fresh/-/fresh-0.3.0.tgz"
+          "resolved": "https://registry.npmjs.org/fresh/-/fresh-0.3.0.tgz"
         },
         "merge-descriptors": {
           "version": "1.0.1",
           "from": "merge-descriptors@1.0.1",
-          "resolved": "http://npm.internal.magnet.me:4873/merge-descriptors/-/merge-descriptors-1.0.1.tgz"
+          "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-1.0.1.tgz"
         },
         "methods": {
           "version": "1.1.2",
@@ -359,7 +359,7 @@
             "ee-first": {
               "version": "1.1.1",
               "from": "ee-first@1.1.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ee-first/-/ee-first-1.1.1.tgz"
+              "resolved": "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz"
             }
           }
         },
@@ -386,14 +386,14 @@
             "ipaddr.js": {
               "version": "1.1.1",
               "from": "ipaddr.js@1.1.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ipaddr.js/-/ipaddr.js-1.1.1.tgz"
+              "resolved": "https://registry.npmjs.org/ipaddr.js/-/ipaddr.js-1.1.1.tgz"
             }
           }
         },
         "qs": {
           "version": "6.2.0",
           "from": "qs@6.2.0",
-          "resolved": "http://npm.internal.magnet.me:4873/qs/-/qs-6.2.0.tgz"
+          "resolved": "https://registry.npmjs.org/qs/-/qs-6.2.0.tgz"
         },
         "range-parser": {
           "version": "1.2.0",
@@ -413,7 +413,7 @@
             "http-errors": {
               "version": "1.5.1",
               "from": "http-errors@>=1.5.0 <1.6.0",
-              "resolved": "http://npm.internal.magnet.me:4873/http-errors/-/http-errors-1.5.1.tgz",
+              "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-1.5.1.tgz",
               "dependencies": {
                 "inherits": {
                   "version": "2.0.3",
@@ -423,19 +423,19 @@
                 "setprototypeof": {
                   "version": "1.0.2",
                   "from": "setprototypeof@1.0.2",
-                  "resolved": "http://npm.internal.magnet.me:4873/setprototypeof/-/setprototypeof-1.0.2.tgz"
+                  "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.0.2.tgz"
                 }
               }
             },
             "mime": {
               "version": "1.3.4",
               "from": "mime@1.3.4",
-              "resolved": "http://npm.internal.magnet.me:4873/mime/-/mime-1.3.4.tgz"
+              "resolved": "https://registry.npmjs.org/mime/-/mime-1.3.4.tgz"
             },
             "ms": {
               "version": "0.7.1",
               "from": "ms@0.7.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ms/-/ms-0.7.1.tgz"
+              "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.1.tgz"
             },
             "statuses": {
               "version": "1.3.1",
@@ -452,22 +452,22 @@
         "type-is": {
           "version": "1.6.14",
           "from": "type-is@>=1.6.13 <1.7.0",
-          "resolved": "http://npm.internal.magnet.me:4873/type-is/-/type-is-1.6.14.tgz",
+          "resolved": "https://registry.npmjs.org/type-is/-/type-is-1.6.14.tgz",
           "dependencies": {
             "media-typer": {
               "version": "0.3.0",
               "from": "media-typer@0.3.0",
-              "resolved": "http://npm.internal.magnet.me:4873/media-typer/-/media-typer-0.3.0.tgz"
+              "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz"
             },
             "mime-types": {
               "version": "2.1.13",
-              "from": "mime-types@>=2.1.11 <2.2.0",
-              "resolved": "http://npm.internal.magnet.me:4873/mime-types/-/mime-types-2.1.13.tgz",
+              "from": "mime-types@>=2.1.13 <2.2.0",
+              "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.13.tgz",
               "dependencies": {
                 "mime-db": {
                   "version": "1.25.0",
                   "from": "mime-db@>=1.25.0 <1.26.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/mime-db/-/mime-db-1.25.0.tgz"
+                  "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.25.0.tgz"
                 }
               }
             }
@@ -513,17 +513,17 @@
             "lru-cache": {
               "version": "4.0.2",
               "from": "lru-cache@>=4.0.1 <5.0.0",
-              "resolved": "http://npm.internal.magnet.me:4873/lru-cache/-/lru-cache-4.0.2.tgz",
+              "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-4.0.2.tgz",
               "dependencies": {
                 "pseudomap": {
                   "version": "1.0.2",
                   "from": "pseudomap@>=1.0.1 <2.0.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/pseudomap/-/pseudomap-1.0.2.tgz"
+                  "resolved": "https://registry.npmjs.org/pseudomap/-/pseudomap-1.0.2.tgz"
                 },
                 "yallist": {
                   "version": "2.0.0",
                   "from": "yallist@>=2.0.0 <3.0.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/yallist/-/yallist-2.0.0.tgz"
+                  "resolved": "https://registry.npmjs.org/yallist/-/yallist-2.0.0.tgz"
                 }
               }
             },
@@ -535,7 +535,7 @@
                 "isexe": {
                   "version": "1.1.2",
                   "from": "isexe@>=1.1.1 <2.0.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/isexe/-/isexe-1.1.2.tgz"
+                  "resolved": "https://registry.npmjs.org/isexe/-/isexe-1.1.2.tgz"
                 }
               }
             }
@@ -544,12 +544,12 @@
         "debug": {
           "version": "2.2.0",
           "from": "debug@>=2.2.0 <2.3.0",
-          "resolved": "http://npm.internal.magnet.me:4873/debug/-/debug-2.2.0.tgz",
+          "resolved": "https://registry.npmjs.org/debug/-/debug-2.2.0.tgz",
           "dependencies": {
             "ms": {
               "version": "0.7.1",
               "from": "ms@0.7.1",
-              "resolved": "http://npm.internal.magnet.me:4873/ms/-/ms-0.7.1.tgz"
+              "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.1.tgz"
             }
           }
         }
@@ -613,7 +613,7 @@
                 "xtend": {
                   "version": "4.0.1",
                   "from": "xtend@>=4.0.0 <5.0.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/xtend/-/xtend-4.0.1.tgz"
+                  "resolved": "https://registry.npmjs.org/xtend/-/xtend-4.0.1.tgz"
                 }
               }
             }
@@ -632,7 +632,7 @@
                 "through": {
                   "version": "2.3.8",
                   "from": "through@>=2.0.0 <3.0.0",
-                  "resolved": "http://npm.internal.magnet.me:4873/through/-/through-2.3.8.tgz"
+                  "resolved": "https://registry.npmjs.org/through/-/through-2.3.8.tgz"
                 }
               }
             }
@@ -641,7 +641,7 @@
         "semver": {
           "version": "4.3.6",
           "from": "semver@>=4.1.0 <5.0.0",
-          "resolved": "http://npm.internal.magnet.me:4873/semver/-/semver-4.3.6.tgz"
+          "resolved": "https://registry.npmjs.org/semver/-/semver-4.3.6.tgz"
         }
       }
     },
@@ -658,17 +658,17 @@
         "fs-extra": {
           "version": "0.26.7",
           "from": "fs-extra@>=0.26.4 <0.27.0",
-          "resolved": "http://npm.internal.magnet.me:4873/fs-extra/-/fs-extra-0.26.7.tgz",
+          "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-0.26.7.tgz",
           "dependencies": {
             "graceful-fs": {
               "version": "4.1.11",
               "from": "graceful-fs@>=4.1.2 <5.0.0",
-              "resolved": "http://npm.internal.magnet.me:4873/graceful-fs/-/graceful-fs-4.1.11.tgz"
+              "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.1.11.tgz"
             },
             "jsonfile": {
               "version": "2.4.0",
               "from": "jsonfile@>=2.1.0 <3.0.0",
-              "resolved": "http://npm.internal.magnet.me:4873/jsonfile/-/jsonfile-2.4.0.tgz"
+              "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-2.4.0.tgz"
             },
             "klaw": {
               "version": "1.3.1",
@@ -683,7 +683,7 @@
             "rimraf": {
               "version": "2.5.4",
               "from": "rimraf@>=2.2.8 <3.0.0",
-              "resolved": "http://npm.internal.magnet.me:4873/rimraf/-/rimraf-2.5.4.tgz",
+              "resolved": "https://registry.npmjs.org/rimraf/-/rimraf-2.5.4.tgz",
               "dependencies": {
                 "glob": {
                   "version": "7.1.1",
@@ -703,7 +703,7 @@
                         "wrappy": {
                           "version": "1.0.2",
                           "from": "wrappy@>=1.0.0 <2.0.0",
-                          "resolved": "http://npm.internal.magnet.me:4873/wrappy/-/wrappy-1.0.2.tgz"
+                          "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz"
                         }
                       }
                     },
@@ -715,7 +715,7 @@
                     "minimatch": {
                       "version": "3.0.3",
                       "from": "minimatch@>=3.0.2 <4.0.0",
-                      "resolved": "http://npm.internal.magnet.me:4873/minimatch/-/minimatch-3.0.3.tgz",
+                      "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.0.3.tgz",
                       "dependencies": {
                         "brace-expansion": {
                           "version": "1.1.6",
@@ -730,7 +730,7 @@
                             "concat-map": {
                               "version": "0.0.1",
                               "from": "concat-map@0.0.1",
-                              "resolved": "http://npm.internal.magnet.me:4873/concat-map/-/concat-map-0.0.1.tgz"
+                              "resolved": "https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz"
                             }
                           }
                         }
@@ -739,12 +739,12 @@
                     "once": {
                       "version": "1.4.0",
                       "from": "once@>=1.3.0 <2.0.0",
-                      "resolved": "http://npm.internal.magnet.me:4873/once/-/once-1.4.0.tgz",
+                      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
                       "dependencies": {
                         "wrappy": {
                           "version": "1.0.2",
                           "from": "wrappy@>=1.0.0 <2.0.0",
-                          "resolved": "http://npm.internal.magnet.me:4873/wrappy/-/wrappy-1.0.2.tgz"
+                          "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz"
                         }
                       }
                     }
@@ -764,7 +764,7 @@
         "nodegit-promise": {
           "version": "4.0.0",
           "from": "nodegit-promise@>=4.0.0 <4.1.0",
-          "resolved": "http://npm.internal.magnet.me:4873/nodegit-promise/-/nodegit-promise-4.0.0.tgz",
+          "resolved": "https://registry.npmjs.org/nodegit-promise/-/nodegit-promise-4.0.0.tgz",
           "dependencies": {
             "asap": {
               "version": "2.0.5",
@@ -776,7 +776,7 @@
         "object-assign": {
           "version": "4.1.0",
           "from": "object-assign@>=4.0.1 <5.0.0",
-          "resolved": "http://npm.internal.magnet.me:4873/object-assign/-/object-assign-4.1.0.tgz"
+          "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.0.tgz"
         }
       }
     },

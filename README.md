@@ -46,6 +46,7 @@ All options for requesting are chainable.
 | Originals | GET `/example.jpg` | The original image is served. No blurring or cropping will be applied |
 | Cropping | GET `/example_100_100.jpg?fit=crop` | The image is cropped to the resolution, the result is an exact match for the resolution. Images are cropped to the center. |
 | Canvas | GET `/example_100_100.jpg?fit=canvas` | The image is resized as normally, but the edges to the bounding box are filled with white. The image is centered in the bounding box. |
+| Cover | GET `/example_100_100.jpg?fit=cover` | The image is resized where the requested sizes function as a minimum instead of a maximum |
 | Blurring | GET `/example_100_100.jpg?blur=true` | The image is blurred slightly |
 | Crop on upload | POST `/example.jpg?x=30&y=40&width=100&height=200` | The image original is saved after cropping by the suggested parameters |
 

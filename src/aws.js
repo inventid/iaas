@@ -11,7 +11,7 @@ AWS.config.update({
 });
 const S3 = new AWS.S3();
 
-const upload = async(client, params) => {
+const upload = (client, params) => {
   return new Promise((resolve, reject) => client.putObject(params, err => err ? reject(err) : resolve()));
 };
 

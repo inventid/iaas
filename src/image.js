@@ -60,7 +60,7 @@ const clip = async(client, params) => {
 
 const cover = async(client, params) => {
   return client.resize(params.width, params.height, '^');
-}
+};
 
 // Same as clipping, however the remainder of the bounding box is filled with
 // white.

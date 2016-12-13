@@ -58,6 +58,10 @@ const clip = async(client, params) => {
   return client.resize(params.width, params.height);
 };
 
+const cover = async(client, params) => {
+  return client.resize(params.width, params.height, '^');
+}
+
 // Same as clipping, however the remainder of the bounding box is filled with
 // white.
 const canvas = async(client, params) => {
@@ -73,6 +77,8 @@ const fit = async(client, params) => {
     return canvas(client, params);
   } else if (params.fit === 'clip') {
     return clip(client, params);
+  } else if (params.fit === 'cover') {
+    return cover(client, params);
   }
   throw new Error(`Format '${params.fit}' was accepted but could not be handled`);
 };

@@ -5,7 +5,7 @@ const BLUR_RADIUS = Number(process.env.BLUR_RADIUS) || 15; //eslint-disable-line
 const BLUR_SIGMA = Number(process.env.BLUR_SIGMA) || 7; //eslint-disable-line no-process-env
 
 const ALLOWED_TYPES = ['jpg', 'jpeg', 'jfif', 'jpe', 'png'];
-const ALLOWED_FITS = ['clip', 'crop', 'canvas'];
+const ALLOWED_FITS = ['clip', 'crop', 'canvas', 'cover'];
 
 const getMimeFromExtension = (extension) => {
   switch (extension) {

@@ -145,7 +145,7 @@ export default {
       });
       r.on('error', (error) => {
         log('error', `The live image stream hit an error: ${error}`);
-        stdout.pipe(response);
+        stdout.unpipe(response);
         errors.push(error);
         r.end();
       });

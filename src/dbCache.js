@@ -45,7 +45,14 @@ export default (db) => {
         const result = await promiseQuery(insertImage, vars);
         return result.rowCount === 1;
       } catch (e) {
-        log('error', e.toString());
+        const message = e.toString();
+        if (message.startsWith('duplicate key value violates unique constraint')) {
+          // This is triggered if two images raced to be computed simultaneously and only one can be saved to the db
+          // As a result, we do not consider this an error
+          log('debug', 'Two images raced to be saved in the database. Persisted just one.');
+          return true;
+        }
+        log('error', message);
         return false;
       }
     }

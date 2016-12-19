@@ -26,7 +26,7 @@ export default (db) => {
         // Cache miss
         return null;
       } catch (e) {
-        log('error', e.stack);
+        log('error', e.toString());
         return null;
       }
     },
@@ -45,7 +45,7 @@ export default (db) => {
         const result = await promiseQuery(insertImage, vars);
         return result.rowCount === 1;
       } catch (e) {
-        log('error', JSON.stringify(e));
+        log('error', e.toString());
         return false;
       }
     }

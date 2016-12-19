@@ -45,7 +45,7 @@ export default (db) => {
         const result = await promiseQuery(insertImage, vars);
         return result.rowCount === 1;
       } catch (e) {
-        log('error', e.stack);
+        log('error', JSON.stringify(e));
         return false;
       }
     }

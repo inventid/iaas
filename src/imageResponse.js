@@ -99,7 +99,7 @@ const logErrIfNeeded = (stream, streamName) => {
 const imageKey = params => `${params.name}_${params.width}x${params.height}.${params.fit}.b-${Boolean(params.blur)}.${params.type}`;
 
 export default {
-  magic: async function (db, params, method, response) {
+  magic: async function (db, params, method, response, request) {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
@@ -150,14 +150,20 @@ export default {
       }
       const errors = [];
       const r = stdout.pipe(response);
+      if (request) {
+        request.on('close', () => {
+          log('warn', 'Client disconnected prematurely. Terminating stream');
+          stdout.unpipe(response);
+          errors.push('Client disconnected prematurely.');
+          r.end();
+        });
+      }
       r.on('finish', () => {
         if (errors.length === 0) {
           log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
         } else {
-          log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+          log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}). Errors: ${JSON.stringify(errors)}`);  //eslint-disable-line max-len
         }
-        // This is to close the response while a background job will continue to process
-        response.end();
       });
       r.on('error', (error) => {
         log('error', `The live image stream hit an error: ${error}`);

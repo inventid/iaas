@@ -127,7 +127,7 @@ export default {
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
     browserImage.stream(params.type, (err, stdout) => {
-      if(err) {
+      if (err) {
         response.status(500).end();
         log('error', `Error occurred while creating live image: ${err}`);
         return;
@@ -135,7 +135,7 @@ export default {
       const errors = [];
       const r = stdout.pipe(response);
       r.on('finish', () => {
-	    if (errors.length === 0) {
+        if (errors.length === 0) {
           log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
         } else {
           log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len

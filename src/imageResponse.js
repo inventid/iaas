@@ -127,11 +127,27 @@ export default {
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
     browserImage.stream(params.type, (err, stdout) => {
+      if (err) {
+        response.status(500).end();
+        log('error', `Error occurred while creating live image: ${err}`);
+        return;
+      }
+      const errors = [];
       const r = stdout.pipe(response);
       r.on('finish', () => {
-        log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        if (errors.length === 0) {
+          log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        } else {
+          log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        }
         // This is to close the response while a background job will continue to process
         response.end();
+      });
+      r.on('error', (error) => {
+        log('error', `The live image stream hit an error: ${error}`);
+        stdout.unpipe(response);
+        errors.push(error);
+        r.end();
       });
     });
 

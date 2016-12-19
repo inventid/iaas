@@ -15,7 +15,7 @@ const write = (client, file) => {
   return new Promise((resolve, reject) => client.write(file, err => err ? reject(err) : resolve()));
 };
 const size = (client) => {
-  return new Promise((resolve, reject) => client.size((err, data) => err ? reject(err) : resolve(data)));
+  return new Promise((resolve, reject) => client.size({bufferStream: true}, (err, data) => err ? reject(err) : resolve(data)));
 };
 
 // Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg

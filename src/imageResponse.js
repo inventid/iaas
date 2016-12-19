@@ -81,6 +81,21 @@ const sendFoundHeaders = (params, response) => {
   });
 };
 
+const logErrIfNeeded = (stream, streamName) => {
+  let data = '';
+  stream.on('data', (chunk) => {
+    log('debug', `Got a chunk of data: ${chunk}`);
+    data = `${data}${chunk}`;
+  });
+  stream.on('end', () => {
+    if (data !== '') {
+      log('error', `Got error data from stream '${streamName}': ${data}`);
+    } else {
+      log('debug', 'Finished error stream. Nothing was in the stream.');
+    }
+  });
+};
+
 const imageKey = params => `${params.name}_${params.width}x${params.height}.${params.fit}.b-${Boolean(params.blur)}.${params.type}`;
 
 export default {
@@ -126,7 +141,8 @@ export default {
 
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
-    browserImage.stream(params.type, (err, stdout) => {
+    browserImage.stream(params.type, (err, stdout, stderr) => {
+      logErrIfNeeded(stderr, 'Live image creation stderr');
       if (err) {
         response.status(500).end();
         log('error', `Error occurred while creating live image: ${err}`);

@@ -104,12 +104,12 @@ server.get('/robots.txt', (req, res) => {
 server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
-  imageResponse.magic(db, params, req.method, res);
+  imageResponse.magic(db, params, req.method, res, req);
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
-  imageResponse.magic(db, params, req.method, res);
+  imageResponse.magic(db, params, req.method, res, req);
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original

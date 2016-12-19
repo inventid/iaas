@@ -132,15 +132,21 @@ export default {
         log('error', `Error occurred while creating live image: ${err}`);
         return;
       }
+      const errors = [];
       const r = stdout.pipe(response);
       r.on('finish', () => {
-        log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+	    if (errors.length === 0) {
+          log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        } else {
+          log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
+        }
         // This is to close the response while a background job will continue to process
         response.end();
       });
       r.on('error', (error) => {
-        log('error', `The live image stream errorred with ${error}`);
-        response.end();
+        log('error', `The live image stream hit an error: ${error}`);
+        stdout.pipe(response);
+        errors.push(error);
         r.end();
       });
     });

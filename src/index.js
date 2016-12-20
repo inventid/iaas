@@ -73,6 +73,8 @@ const uploadImage = async(req, res) => {
   });
 };
 
+const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
+
 const server = express();
 server.use(bodyParser.json());
 server.use((req, res, next) => {
@@ -87,7 +89,7 @@ server.use((req, res, next) => {
 server.get('/_health', (req, res) => {
   if (db) {
     res.status(200).end('OK');
-    log('info', 'Healthcheck OK');
+    log('debug', 'Healthcheck OK');
   } else {
     res.status(500).end('No database connection');
     log('error', 'Healthcheck FAILED');
@@ -97,23 +99,26 @@ server.get('/robots.txt', (req, res) => {
   const content = (config.has('allow_indexing') && config.get('allow_indexing')) ?
     "User-agent: *\nAllow: /" : "User-agent: *\nDisallow: /";
   res.status(200).end(content);
-  log('info', 'Robots.txt served');
+  log('debug', 'Robots.txt served');
 });
 
 // The actual endpoints for fetching
 server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
-  imageResponse.magic(db, params, req.method, res, req);
+  req.once('close', () => onClosedConnection(imageResponse.description(params)));
+  imageResponse.magic(db, params, req.method, res);
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
-  imageResponse.magic(db, params, req.method, res, req);
+  req.once('close', () => onClosedConnection(imageResponse.description(params)));
+  imageResponse.magic(db, params, req.method, res);
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original
   const params = urlParameters(req, false);
+  req.once('close', () => onClosedConnection(imageResponse.description(params)));
   imageResponse.original(db, params, req.method, res);
 });
 

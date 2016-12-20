@@ -84,7 +84,7 @@ const sendFoundHeaders = (params, response) => {
 const imageKey = params => `${params.name}_${params.width}x${params.height}.${params.fit}.b-${Boolean(params.blur)}.${params.type}`;
 
 export default {
-  magic: async function (db, params, method, response, request) {
+  magic: async function (db, params, method, response) {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
@@ -104,7 +104,7 @@ export default {
       return;
     }
 
-    const imageDescription = `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`; //eslint-disable-line max-len
+    const imageDescription = this.description(params);
     // Image exists and is within bounds.
     // This method is mainly used by browsers to serve retina images
     if (isHeadRequest(method)) {
@@ -127,30 +127,23 @@ export default {
 
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
-    browserImage.toBuffer(params.type, (err, stream) => {
-      if (request) {
-        request.once('close', () => {
-          log('warn', `Client disconnected prematurely. Terminating stream for ${imageDescription}`);
-          response.end();
-        });
-      }
-
+    browserImage.toBuffer(params.type, (err, buffer) => {
       if (err) {
         response.status(500).end();
         log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
         return;
       }
 
-      response.send(stream).end();
+      response.end(buffer);
       log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
     });
 
     const awsStartTime = new Date();
     const awsImage = await image.magic(imagePath(params.name), params, response);
-    awsImage.toBuffer(params.type, (err, stream) => {
+    awsImage.toBuffer(params.type, (err, buffer) => {
       if (!err) {
         log('info', `Creating AWS image took ${new Date() - awsStartTime}ms: ${imageDescription}`);
-        aws(cache)(imageKey(params), params, stream);
+        aws(cache)(imageKey(params), params, buffer);
       }
     });
   },
@@ -174,5 +167,8 @@ export default {
   upload: async function (name, path, cropParameters) {
     const destinationPath = `${config.get('originals_dir')}/${name}`;
     return await image.writeOriented(path, destinationPath, cropParameters);
+  },
+  description(params) {
+    return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`; //eslint-disable-line max-len
   }
 };

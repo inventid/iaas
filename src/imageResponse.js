@@ -150,15 +150,6 @@ export default {
       }
       const errors = [];
       const r = stdout.pipe(response);
-      if (request) {
-        request.on('close', () => {
-          log('warn', 'Client disconnected prematurely. Terminating stream');
-          stdout.unpipe(response);
-          errors.push('Client disconnected prematurely.');
-          response.end();
-          r.end();
-        });
-      }
       r.on('finish', () => {
         if (errors.length === 0) {
           log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
@@ -174,6 +165,16 @@ export default {
         response.end();
         r.end();
       });
+      if (request) {
+        request.once('close', () => {
+          log('warn', 'Client disconnected prematurely. Terminating stream');
+          stdout.unpipe(response);
+          errors.push('Client disconnected prematurely.');
+          response.end();
+          r.end();
+        });
+      }
+
     });
 
     const awsStartTime = new Date();

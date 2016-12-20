@@ -155,6 +155,7 @@ export default {
           log('warn', 'Client disconnected prematurely. Terminating stream');
           stdout.unpipe(response);
           errors.push('Client disconnected prematurely.');
+          response.end();
           r.end();
         });
       }
@@ -164,11 +165,13 @@ export default {
         } else {
           log('warn', `Got an error while creating live image. Took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}). Errors: ${JSON.stringify(errors)}`);  //eslint-disable-line max-len
         }
+        response.end();
       });
       r.on('error', (error) => {
         log('error', `The live image stream hit an error: ${error}`);
         stdout.unpipe(response);
         errors.push(error);
+        response.end();
         r.end();
       });
     });

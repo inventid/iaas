@@ -150,7 +150,7 @@ export default {
       }
       const errors = [];
       const r = stdout.pipe(response);
-      r.on('finish', () => {
+      r.once('finish', () => {
         if (errors.length === 0) {
           log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`);  //eslint-disable-line max-len
         } else {
@@ -158,7 +158,7 @@ export default {
         }
         response.end();
       });
-      r.on('error', (error) => {
+      r.once('error', (error) => {
         log('error', `The live image stream hit an error: ${error}`);
         stdout.unpipe(response);
         errors.push(error);

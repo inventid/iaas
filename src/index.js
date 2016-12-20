@@ -87,7 +87,7 @@ server.use((req, res, next) => {
 server.get('/_health', (req, res) => {
   if (db) {
     res.status(200).end('OK');
-    log('info', 'Healthcheck OK');
+    log('debug', 'Healthcheck OK');
   } else {
     res.status(500).end('No database connection');
     log('error', 'Healthcheck FAILED');
@@ -97,7 +97,7 @@ server.get('/robots.txt', (req, res) => {
   const content = (config.has('allow_indexing') && config.get('allow_indexing')) ?
     "User-agent: *\nAllow: /" : "User-agent: *\nDisallow: /";
   res.status(200).end(content);
-  log('info', 'Robots.txt served');
+  log('debug', 'Robots.txt served');
 });
 
 // The actual endpoints for fetching

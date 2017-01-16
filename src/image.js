@@ -133,5 +133,14 @@ export default {
         originalWidth: null
       };
     }
+  },
+  imageArea: async function(path) {
+    try {
+      const imgSize = await size(im(path));
+      return imgSize.width * imgSize.height;
+    } catch (e) {
+      log('error', e);
+      return Number.MAX_SAFE_INTEGER;
+    }
   }
 };

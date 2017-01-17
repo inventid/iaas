@@ -13,6 +13,8 @@ import {areAllDefined} from "./helper";
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
 
+const MAX_IMAGE_IN_MP = 30;
+
 process.on('uncaughtException', function (err) {
   log('error', err);
   process.exit(1);
@@ -62,6 +64,14 @@ const uploadImage = async(req, res) => {
     res.status(400).end();
     return;
   }
+
+  const isAllowedToHandle = await imageResponse.hasAllowableImageSize(files.image.path, MAX_IMAGE_IN_MP);
+  if (!isAllowedToHandle) {
+    log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
+    res.status(413).end();
+    return;
+  }
+
   const cropParameters = cropParametersOnUpload(req);
   const result = await imageResponse.upload(name, files.image.path, cropParameters);
   log('info', `Finished writing original file ${name}`);

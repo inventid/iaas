@@ -12,3 +12,5 @@ images/
 
 // Ignore the dist folder
 dist/
+
+npm-debug*

@@ -3,7 +3,7 @@ require("babel-polyfill");
 import fs from "fs";
 import gm from "gm";
 import log from "./log";
-import uuid from "uuid";
+import uuid from "uuid/v4";
 
 const im = gm.subClass({imageMagick: true});
 
@@ -33,7 +33,7 @@ const crop = async(client, params) => {
   // The ^ ensures the images is resized while maintaining the ratio
   // However the sizes are treated as minimum values instead of maximum values
   client = client.resize(params.width, params.height, '^');
-  const tmpFile = `/tmp/${uuid.v4()}`;
+  const tmpFile = `/tmp/${uuid()}`;
   try {
     await write(client, tmpFile);
     client = im(tmpFile);

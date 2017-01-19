@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import uuid from "uuid/v4";
 import log from "./log";
 
 const insertToken = `INSERT INTO tokens (id, image_id, valid_until, used) VALUES ($1,$2,now() + interval '15 minute', 0)`;
@@ -22,7 +22,7 @@ export default (db) => {
   };
   return {
     createToken: async(id) => {
-      const newToken = uuid.v4();
+      const newToken = uuid();
       try {
         await promiseQuery(insertToken, [newToken, id]);
         log('info', 'Created token successfully');

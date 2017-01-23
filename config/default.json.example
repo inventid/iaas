@@ -4,7 +4,7 @@
     "secret_key": "abc",
     "region": "eu-west-1",
     "bucket": "bucket",
-    "bucket_url": "https://s3-eu-west-1.amazonaws.com/bucket"
+    "cache_host": "https://s3-eu-west-1.amazonaws.com/bucket"
   },
   "originals_dir": "/opt/images",
   "listen_address": "127.0.0.1",

@@ -15,6 +15,10 @@ const upload = (client, params) => {
   return new Promise((resolve, reject) => client.putObject(params, err => err ? reject(err) : resolve()));
 };
 
+
+// TODO: Switch to aws.cache_host only soon
+const cacheHost = () => config.get('aws.cache_host') || config.get('aws.bucket_url');
+
 export default (cache) => async(name, params, data) => {
   // See https://github.com/inventid/iaas/issues/78
   const renderedAt = new Date();
@@ -39,7 +43,7 @@ export default (cache) => async(name, params, data) => {
   }
   log('info', `Uploading ${name} to AWS image took ${new Date() - startTime}ms`);
 
-  const url = `${config.get('aws.bucket_url')}/${savedName}`;
+  const url = `${cacheHost()}/${savedName}`;
 
   try {
     const addedSuccessfully = await cache.addToCache(params, url, renderedAt);

@@ -171,8 +171,8 @@ export default {
   description(params) {
     return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`; //eslint-disable-line max-len
   },
-  hasAllowableImageSize: async function(path, maxSizeInMegapixel) {
+  hasAllowableImageSize: async function (path, maxSizeInMegapixel) {
     const imageSize = await image.imageArea(path);
-    return imageSize < (maxSizeInMegapixel*1e6);
+    return imageSize < (maxSizeInMegapixel * 1e6);
   }
 };

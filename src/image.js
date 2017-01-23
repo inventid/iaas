@@ -134,7 +134,7 @@ export default {
       };
     }
   },
-  imageArea: async function(path) {
+  imageArea: async function (path) {
     try {
       const imgSize = await size(im(path));
       return imgSize.width * imgSize.height;

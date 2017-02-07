@@ -69,6 +69,14 @@ const canvas = async(client, params) => {
   return client.gravity('Center').extent(params.width, params.height);
 };
 
+// Fill a transparent background with white
+const background = async(client, params) => {
+	if (params.mime === 'image/jpeg') {
+		return client.background('white').flatten();
+	}
+	return client;
+};
+
 // Fit the image appropriately.
 const fit = async(client, params) => {
   if (params.fit === 'crop') {
@@ -94,6 +102,7 @@ const blur = async(client, params) => {
 export default {
   magic: async function (file, params) {
     let client = im(file);
+    client = await background(client, params);
     client = await fit(client, params);
     client = await blur(client, params);
     client = await interlace(client, params);

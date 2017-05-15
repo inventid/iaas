@@ -85,6 +85,19 @@ const uploadImage = async(req, res) => {
 
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
 
+const isDbConnectionAlive = async (db) => {
+	const promiseQuery = (query, vars) => {
+		return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
+	};
+	const testQuery = 'SELECT 1';
+	try {
+		const result = await promiseQuery(testQuery, []);
+		return Boolean(result.rowCount && result.rowCount === 1);
+	} catch (e) {
+		return false;
+	}
+};
+
 const server = express();
 server.use(bodyParser.json());
 server.use((req, res, next) => {
@@ -152,15 +165,36 @@ server.post('/token', async(req, res) => {
 server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);
 
+const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() => {
+	if(dbEnder) {
+		dbEnder();
+	}
+	if(expressInstance) {
+		expressInstance.close();
+	}
+	process.exit(2);
+}, timeout);
 
-pg.connect(connectionString, (err, client) => {
+pg.connect(connectionString, (err, client, done) => {
   if (err) {
     log('error', `Error fetching client from pool: ${err}`);
+    slowShutdown(done, null, 250);
   } else {
     db = client;
     migrateAndStart(db, './migrations', () => {
       const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
-      server.listen(port, () => log('info', `Server started listening on port ${port}`));
+      const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+      const dbChecker = setInterval(() => {
+        isDbConnectionAlive(db).then(isAlive => {
+         if (!isAlive) {
+           clearInterval(dbChecker);
+           log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+           db = null;
+           // Slight timeout to handle some final requests?
+           slowShutdown(done, handler);
+         }
+        });
+      }, 500)
     });
   }
 });

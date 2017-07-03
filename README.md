@@ -114,6 +114,7 @@ The following settings are supported:
 | constraints.max_height | The maximum allowed height of the image. If a request is made that succeeds this height then a redirect is issued to an equivalent image within bounds. |
 | log.[level] | Whether to enable logs generated with the specified level, Where level is one of debug, info, warn or error. |
 | redirect_cache_timeout | Cache age in seconds of redirects to AWS. This value is used as the max-age in the Cache-Control header |
+| timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts | 
 
 ### Database
 

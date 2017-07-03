@@ -2,8 +2,25 @@ require("babel-polyfill");
 
 import fs from "fs";
 import gm from "gm";
+import config from "config";
 import log from "./log";
 import uuid from "uuid/v4";
+
+const gmOptions = {};
+if (config.has('timeout.conversion')) {
+ const timeout = Number(config.get('timeout.conversion'));
+ if (isNaN(timeout)) {
+   log('warn', 'The configuration value of timeout.conversion resolved to a NaN value. Ignoring it!');
+ } else if (timeout < 0 ) {
+   log('warn', 'The configuration value of timeout.conversion did not resolve to a nonnegative value. Ignoring it!');
+ } else if (timeout === 0 ) {
+	 log('info', 'Not setting any image timeout');
+ } else {
+   gmOptions.timeout = timeout;
+ }
+}
+
+log('info', `Booting gm with the following options: ${JSON.stringify(gmOptions)}`);
 
 const im = gm.subClass({imageMagick: true});
 
@@ -36,7 +53,7 @@ const crop = async(client, params) => {
   const tmpFile = `/tmp/${uuid()}`;
   try {
     await write(client, tmpFile);
-    client = im(tmpFile);
+    client = im(tmpFile).options(gmOptions);
     const imgSize = await size(client);
     setTimeout(() => fs.unlink(tmpFile), clearTempfilesTimeout);
     return client
@@ -101,7 +118,7 @@ const blur = async(client, params) => {
 
 export default {
   magic: async function (file, params) {
-    let client = im(file);
+    let client = im(file).options(gmOptions);
     client = await fit(client, params);
     client = await background(client, params);
     client = await blur(client, params);
@@ -111,7 +128,8 @@ export default {
   writeOriented: async function (source, destination, cropParameters) {
     // if possible, crop first (since the UA had that orientation), then orient
     if (cropParameters) {
-      const cropped = im(source).crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
+      const cropped = im(source).options(gmOptions)
+          .crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
       try {
         await write(cropped, source);
       } catch (e) {
@@ -120,7 +138,7 @@ export default {
       }
     }
 
-    const oriented = im(source).autoOrient();
+    const oriented = im(source).options(gmOptions).autoOrient();
 
     try {
       await write(oriented, destination);
@@ -130,7 +148,7 @@ export default {
     }
 
     try {
-      const imgSize = await size(im(destination));
+      const imgSize = await size(im(destination).options(gmOptions));
       return {
         originalHeight: imgSize.height || null,
         originalWidth: imgSize.width || null
@@ -145,7 +163,7 @@ export default {
   },
   imageArea: async function (path) {
     try {
-      const imgSize = await size(im(path));
+      const imgSize = await size(im(path).options(gmOptions));
       return imgSize.width * imgSize.height;
     } catch (e) {
       log('error', e);

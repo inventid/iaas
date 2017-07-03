@@ -22,5 +22,8 @@
   "log": {
     "debug": false
   },
-  "redirect_cache_timeout" : 604800
+  "redirect_cache_timeout" : 604800,
+  "timeout": {
+    "conversion": 0
+  }
 }

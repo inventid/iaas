@@ -8,16 +8,16 @@ import uuid from "uuid/v4";
 
 const gmOptions = {};
 if (config.has('timeout.conversion')) {
- const timeout = Number(config.get('timeout.conversion'));
- if (isNaN(timeout)) {
-   log('warn', 'The configuration value of timeout.conversion resolved to a NaN value. Ignoring it!');
- } else if (timeout < 0) {
-   log('warn', 'The configuration value of timeout.conversion did not resolve to a nonnegative value. Ignoring it!');
- } else if (timeout === 0) {
-	 log('info', 'Not setting any image timeout');
- } else {
-   gmOptions.timeout = timeout;
- }
+  const timeout = Number(config.get('timeout.conversion'));
+  if (isNaN(timeout)) {
+    log('warn', 'The configuration value of timeout.conversion resolved to a NaN value. Ignoring it!');
+  } else if (timeout < 0) {
+    log('warn', 'The configuration value of timeout.conversion did not resolve to a nonnegative value. Ignoring it!');
+  } else if (timeout === 0) {
+    log('info', 'Not setting any image timeout');
+  } else {
+    gmOptions.timeout = timeout;
+  }
 }
 
 log('info', `Booting gm with the following options: ${JSON.stringify(gmOptions)}`);
@@ -184,10 +184,10 @@ export default {
       };
     }
   },
-  imageSize: async function(path) {
+  imageSize: async function (path) {
     return size(im(path));
   },
-  imageArea: async function(path) {
+  imageArea: async function (path) {
     try {
       const imgSize = await size(im(path).options(gmOptions));
       return imgSize.width * imgSize.height;

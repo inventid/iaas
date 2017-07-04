@@ -189,7 +189,7 @@ pg.connect(connectionString, (err, client, done) => {
       const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
       const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
       const dbChecker = setInterval(() => {
-        isDbConnectionAlive(db).then(isAlive => {
+        isDbConnectionAlive(db).then(isAlive => { //eslint-disable-line max-nested-callbacks
          if (!isAlive) {
            clearInterval(dbChecker);
            log('error', 'Database connection went offline! Restarting the application so we can connect to another one');

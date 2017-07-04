@@ -181,7 +181,7 @@ export default {
     return await image.writeOriented(path, destinationPath, cropParameters);
   },
   description(params) {
-    return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)})`; //eslint-disable-line max-len
+    return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}), quality: ${Number(params.quality) || 'auto'}`; //eslint-disable-line max-len
   },
   hasAllowableImageSize: async function (path, maxSizeInMegapixel) {
     const imageSize = await image.imageArea(path);

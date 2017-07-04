@@ -17,7 +17,13 @@ const upload = (client, params) => {
 
 
 // TODO: Switch to aws.cache_host only soon
-const cacheHost = () => config.get('aws.cache_host') || config.get('aws.bucket_url');
+const cacheHost = () => {
+  if (config.has('aws.cache_host')) {
+    return config.get('aws.cache_host');
+  } else {
+    return config.get('aws.bucket_url');
+  }
+};
 
 export default (cache) => async(name, params, data) => {
   // See https://github.com/inventid/iaas/issues/78

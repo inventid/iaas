@@ -35,7 +35,7 @@ export default (req, requireDimensions = true) => {
     type: 'jpg',
     mime: 'image/jpeg',
     fit: 'clip',
-    quality: 'auto'
+    quality: -1
   };
 
   // Extract data
@@ -43,7 +43,6 @@ export default (req, requireDimensions = true) => {
   const scale = Number(req.params.scale) || 1;
   result.width = Number(req.params.width) * scale || undefined;
   result.height = Number(req.params.height) * scale || undefined;
-  result.quality = Number(req.query.quality) || 'auto';
 
   if (ALLOWED_TYPES.includes(req.params.format.toLowerCase())) {
     result.type = req.params.format.toLowerCase();
@@ -51,6 +50,10 @@ export default (req, requireDimensions = true) => {
   }
   if (req.query.fit && ALLOWED_FITS.includes(req.query.fit.toLowerCase())) {
     result.fit = req.query.fit.toLowerCase();
+  }
+  // Only do this for jpg and ignore it for all other formats
+  if (req.query.quality && result.mime === 'image/jpeg') {
+	  result.quality = Number(req.query.quality) || -1;
   }
   if (req.query.blur && req.query.blur === 'true') {
     result.blur = {

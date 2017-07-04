@@ -1,21 +1,7 @@
 import log from "./log";
 
 const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url, blur, quality, rendered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)';
-const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5 AND blur=$6 AND quality IS NOT DISTINCT FROM $7'; //eslint-disable-line max-len
-
-/**
- * Returns the quality if set explicitly, or null if auto. This is done such
- * that we can keep the DB field as an integer.
- *
- * @param {number|'auto'} quality The quality of the image
- * @returns {number?} The quality if a number, of null if auto
- */
-function qualityOrNull(quality) {
-  if (Number.isFinite(quality)) {
-    return quality;
-  }
-  return null;
-}
+const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5 AND blur=$6 AND quality=$7'; //eslint-disable-line max-len
 
 export default (db) => {
   const promiseQuery = (query, vars) => {
@@ -29,12 +15,12 @@ export default (db) => {
         params.fit,
         params.mime,
         Boolean(params.blur),
-        qualityOrNull(params.quality)
+        params.quality
       ];
 
       try {
         const result = await promiseQuery(selectImage, vars);
-        if (result.rowCount && result.rowCount === 1) {
+        if (result.rowCount && result.rowCount > 0) {
           // Cache hit
           return result.rows[0].url;
         }
@@ -53,7 +39,7 @@ export default (db) => {
         params.mime,
         url,
         Boolean(params.blur),
-        qualityOrNull(params.quality),
+        params.quality,
         renderedAt
       ];
 

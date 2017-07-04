@@ -113,8 +113,7 @@ const fit = async(client, params) => {
 };
 
 const setQuality = async(client, params) => {
-  const quality = Number(params.quality);
-  if (!quality) {
+  if (params.quality === -1) {
     return client;
   }
 
@@ -123,7 +122,7 @@ const setQuality = async(client, params) => {
   // through. For now, we only support jpg compression, which is the most intuitive.
   switch (params.mime) {
     case 'image/jpeg':
-      return client.quality(Math.min(100, Math.max(0, quality)));
+      return client.quality(Math.min(100, Math.max(0, params.quality)));
     default:
       //No compression supported for other types
       return client;

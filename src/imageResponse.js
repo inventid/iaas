@@ -27,11 +27,18 @@ const doesImageExist = async(name) => {
 
 const isRequestedImageWithinBounds = (params) => {
   // Check if we are allowed to serve an image of this size and optionally redirect
-  return (params.width <= config.get('constraints.max_width') && params.height <= config.get('constraints.max_height'));
+  return (params.width && params.height) &&
+    (params.width <= config.get('constraints.max_width') && params.height <= config.get('constraints.max_height'));
 };
 
-const calculateNewBounds = (params) => {
+const calculateNewBounds = async (params) => {
   // Resize the parameters
+  // If no params are set then we load them from the actual image before calculating new bounds
+  if (!params.width || !params.height) {
+    const fileSize = await image.imageSize(imagePath(params.name));
+    params.width = fileSize.width;
+    params.height = fileSize.height;
+  }
   const providedRatio = params.width / params.height;
   if (params.width > config.get('constraints.max_width')) {
     params.width = config.get('constraints.max_width');
@@ -51,9 +58,11 @@ const calculateNewBounds = (params) => {
 const isHeadRequest = method => (method === 'HEAD');
 
 const redirectImageToWithinBounds = (params, response) => {
+  const newLocation = `/${params.name}_${params.width}_${params.height}.${params.type}` +
+    `?fit=${params.fit}&blur=${Boolean(params.blur)}&quality=${params.quality}`;
   return response.status(307).set({
     'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.', //eslint-disable-line max-len
-    'Location': `/${params.name}_${params.width}_${params.height}.${params.type}?fit=${params.fit}&blur=${Boolean(params.blur)}`
+    'Location': newLocation
   }).end();
 };
 
@@ -81,7 +90,10 @@ const sendFoundHeaders = (params, response) => {
   });
 };
 
-const imageKey = params => `${params.name}_${params.width}x${params.height}.${params.fit}.b-${Boolean(params.blur)}.${params.type}`;
+const imageKey = params =>
+  `${params.name}_${params.width}x${params.height}.${params.fit}` +
+    `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
+
 
 export default {
   magic: async function (db, params, method, response) {
@@ -100,7 +112,7 @@ export default {
 
     // Image exists
     if (!isRequestedImageWithinBounds(params)) {
-      redirectImageToWithinBounds(calculateNewBounds(params), response);
+      redirectImageToWithinBounds(await calculateNewBounds(params), response);
       return;
     }
 

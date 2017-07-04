@@ -5,7 +5,7 @@ import migrateAndStart from "pg-migration";
 import pg from "pg";
 import formidable from "formidable";
 import log from "./log";
-import urlParameters from "./urlParameters";
+import urlParameters, { hasFiltersApplied } from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined} from "./helper";
@@ -139,10 +139,14 @@ server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   imageResponse.magic(db, params, req.method, res);
 });
 server.get('/(:name).(:format)', (req, res) => {
-  // Serve the original
+  // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.original(db, params, req.method, res);
+  if (hasFiltersApplied(params)) {
+    imageResponse.magic(db, params, req.method, res);
+  } else {
+    imageResponse.original(db, params, req.method, res);
+  }
 });
 
 // The upload stuff
@@ -166,10 +170,10 @@ server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);
 
 const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() => {
-	if(dbEnder) {
+	if (dbEnder) {
 		dbEnder();
 	}
-	if(expressInstance) {
+	if (expressInstance) {
 		expressInstance.close();
 	}
 	process.exit(2);
@@ -194,7 +198,7 @@ pg.connect(connectionString, (err, client, done) => {
            slowShutdown(done, handler);
          }
         });
-      }, 500)
+      }, 500);
     });
   }
 });

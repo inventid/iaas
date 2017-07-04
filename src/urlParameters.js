@@ -21,6 +21,10 @@ const getMimeFromExtension = (extension) => {
   }
 };
 
+export function hasFiltersApplied(params) {
+  return Boolean(params.blur) || Number.isFinite(params.quality);
+}
+
 export default (req, requireDimensions = true) => {
   // The default settings
   const result = {
@@ -30,7 +34,8 @@ export default (req, requireDimensions = true) => {
     blur: null,
     type: 'jpg',
     mime: 'image/jpeg',
-    fit: 'clip'
+    fit: 'clip',
+    quality: 'auto'
   };
 
   // Extract data
@@ -38,6 +43,7 @@ export default (req, requireDimensions = true) => {
   const scale = Number(req.params.scale) || 1;
   result.width = Number(req.params.width) * scale || undefined;
   result.height = Number(req.params.height) * scale || undefined;
+  result.quality = Number(req.query.quality) || 'auto';
 
   if (ALLOWED_TYPES.includes(req.params.format.toLowerCase())) {
     result.type = req.params.format.toLowerCase();

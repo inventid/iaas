@@ -11,9 +11,9 @@ if (config.has('timeout.conversion')) {
  const timeout = Number(config.get('timeout.conversion'));
  if (isNaN(timeout)) {
    log('warn', 'The configuration value of timeout.conversion resolved to a NaN value. Ignoring it!');
- } else if (timeout < 0 ) {
+ } else if (timeout < 0) {
    log('warn', 'The configuration value of timeout.conversion did not resolve to a nonnegative value. Ignoring it!');
- } else if (timeout === 0 ) {
+ } else if (timeout === 0) {
 	 log('info', 'Not setting any image timeout');
  } else {
    gmOptions.timeout = timeout;
@@ -96,6 +96,10 @@ const background = async(client, params) => {
 
 // Fit the image appropriately.
 const fit = async(client, params) => {
+  //For original format
+  if (!params.width || !params.height) {
+    return client;
+  }
   if (params.fit === 'crop') {
     return crop(client, params);
   } else if (params.fit === 'canvas') {
@@ -106,6 +110,24 @@ const fit = async(client, params) => {
     return cover(client, params);
   }
   throw new Error(`Format '${params.fit}' was accepted but could not be handled`);
+};
+
+const setQuality = async(client, params) => {
+  const quality = Number(params.quality);
+  if (!quality) {
+    return client;
+  }
+
+  // The imagemagick 'quality' parameter has a very different meaning for
+  // different image types, so it's not a good idea to just blindly pass it
+  // through. For now, we only support jpg compression, which is the most intuitive.
+  switch (params.mime) {
+    case 'image/jpeg':
+      return client.quality(Math.min(100, Math.max(0, quality)));
+    default:
+      //No compression supported for other types
+      return client;
+  }
 };
 
 // Blur the image if requested in the params
@@ -122,6 +144,7 @@ export default {
     client = await fit(client, params);
     client = await background(client, params);
     client = await blur(client, params);
+    client = await setQuality(client, params);
     client = await interlace(client, params);
     return client;
   },
@@ -161,7 +184,10 @@ export default {
       };
     }
   },
-  imageArea: async function (path) {
+  imageSize: async function(path) {
+    return size(im(path));
+  },
+  imageArea: async function(path) {
     try {
       const imgSize = await size(im(path).options(gmOptions));
       return imgSize.width * imgSize.height;

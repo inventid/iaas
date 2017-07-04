@@ -49,6 +49,7 @@ All options for requesting are chainable.
 | Cover | GET `/example_100_100.jpg?fit=cover` | The image is resized where the requested sizes function as a minimum instead of a maximum |
 | Blurring | GET `/example_100_100.jpg?blur=true` | The image is blurred slightly |
 | Crop on upload | POST `/example.jpg?x=30&y=40&width=100&height=200` | The image original is saved after cropping by the suggested parameters |
+| Change image size & quality | Usage GET `/example_100_100.jpg?quality=75` | Change image size and quality. This is a number between 0 and 100 inclusive, or auto (default). When set to auto then the quality of the original image is preserved (note that this is not necessarily equal to 100). This option only works for JPG images, it has no effect on other images. |
 
 
 ## How to use
@@ -114,7 +115,7 @@ The following settings are supported:
 | constraints.max_height | The maximum allowed height of the image. If a request is made that succeeds this height then a redirect is issued to an equivalent image within bounds. |
 | log.[level] | Whether to enable logs generated with the specified level, Where level is one of debug, info, warn or error. |
 | redirect_cache_timeout | Cache age in seconds of redirects to AWS. This value is used as the max-age in the Cache-Control header |
-| timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts | 
+| timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts |
 
 ### Database
 

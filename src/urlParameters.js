@@ -53,7 +53,7 @@ export default (req, requireDimensions = true) => {
   }
   // Only do this for jpg and ignore it for all other formats
   if (req.query.quality && result.mime === 'image/jpeg') {
-	  result.quality = Number(req.query.quality) || -1;
+    result.quality = Number(req.query.quality) || -1;
   }
   if (req.query.blur && req.query.blur === 'true') {
     result.blur = {

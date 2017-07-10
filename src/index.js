@@ -9,6 +9,7 @@ import urlParameters, { hasFiltersApplied } from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined} from "./helper";
+import IntegerCounter from "./integerCounter";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -98,6 +99,32 @@ const isDbConnectionAlive = async (db) => {
 	}
 };
 
+const hitCounter = IntegerCounter();
+const missCounter = IntegerCounter();
+
+const startedAt = new Date();
+
+const stats = {
+  hits: hitCounter,
+  misses: missCounter,
+  get: () => {
+      const hits = hitCounter.get();
+      const misses = missCounter.get();
+      const total = (hits + misses);
+      const datetime = new Date().toISOString();
+      const uptimeInMinutes = (new Date() - startedAt) / 1000 / 60;
+      const generationsPerMinute = misses / uptimeInMinutes;
+      return {
+          datetime,
+          hits,
+          misses,
+          generationsPerMinute,
+          cacheHitRatio: (Math.round(hits * 100 / total) / 100) || 0
+      };
+  }
+};
+let statsPrinter;
+
 const server = express();
 server.use(bodyParser.json());
 server.use((req, res, next) => {
@@ -130,20 +157,20 @@ server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res);
+  imageResponse.magic(db, params, req.method, res, stats);
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res);
+  imageResponse.magic(db, params, req.method, res, stats);
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
   if (hasFiltersApplied(params)) {
-    imageResponse.magic(db, params, req.method, res);
+    imageResponse.magic(db, params, req.method, res, stats);
   } else {
     imageResponse.original(db, params, req.method, res);
   }
@@ -176,6 +203,9 @@ const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() 
 	if (expressInstance) {
 		expressInstance.close();
 	}
+	if (statsPrinter) {
+		clearInterval(statsPrinter);
+	}
 	process.exit(2);
 }, timeout);
 
@@ -188,6 +218,8 @@ pg.connect(connectionString, (err, client, done) => {
     migrateAndStart(db, './migrations', () => {
       const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
       const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+      // Log the stats every 5 minutes if enabled
+      statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
       const dbChecker = setInterval(() => {
         isDbConnectionAlive(db).then(isAlive => { //eslint-disable-line max-nested-callbacks
          if (!isAlive) {

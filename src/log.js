@@ -2,6 +2,7 @@ import config from 'config';
 
 const logLevels = {
   debug: config.has('log.debug') ? Boolean(config.get('log.debug')) : false,
+  stats: config.has('log.stats') ? Boolean(config.get('log.stats')) : false,
   info: config.has('log.info') ? Boolean(config.get('log.info')) : true,
   warn: config.has('log.warn') ? Boolean(config.get('log.warn')) : true,
   error: config.has('log.error') ? Boolean(config.get('log.error')) : true

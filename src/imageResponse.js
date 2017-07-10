@@ -96,7 +96,7 @@ const imageKey = params =>
 
 
 export default {
-  magic: async function (db, params, method, response) {
+  magic: async function (db, params, method, response, stats = undefined) {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
@@ -129,8 +129,14 @@ export default {
     const cacheValue = await cache.getFromCache(params);
     if (cacheValue) {
       log('debug', `Cache hit for ${imageDescription}`);
+      if (stats) {
+        stats.hits.incrementAndGet();
+      }
       redirectToCachedEntity(cacheValue, params, response);
       return;
+    }
+    if (stats) {
+      stats.misses.incrementAndGet();
     }
 
     // Image is present but not in the correct setting

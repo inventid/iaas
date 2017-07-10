@@ -8,7 +8,7 @@ import log from "./log";
 import urlParameters, { hasFiltersApplied } from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
-import {areAllDefined} from "./helper";
+import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
 
 let db;
@@ -20,6 +20,37 @@ process.on('uncaughtException', function (err) {
   log('error', err);
   process.exit(1);
 });
+
+const hitCounter = IntegerCounter();
+const missCounter = IntegerCounter();
+const uploadCounter = IntegerCounter();
+
+const startedAt = new Date();
+
+const stats = {
+    hits: hitCounter,
+    misses: missCounter,
+    uploads: uploadCounter,
+    get: () => {
+        const hits = hitCounter.get();
+        const misses = missCounter.get();
+        const uploads = uploadCounter.get();
+        const total = (hits + misses);
+        const datetime = new Date().toISOString();
+        const uptimeInSeconds = (new Date() - startedAt) / 1000;
+        const generationsPerMinute = roundedRatio(misses, uptimeInSeconds / 60);
+        return {
+            datetime,
+            hits,
+            misses,
+            uploads,
+            uptimeInSeconds,
+            generationsPerMinute,
+            cacheHitRatio: roundedRatio(hits, total)
+        };
+    }
+};
+let statsPrinter;
 
 const promiseUpload = (form, request) => {
   return new Promise((resolve, reject) => form.parse(request, (err, fields, files) => err ? reject(err) : resolve(files)));
@@ -75,6 +106,7 @@ const uploadImage = async(req, res) => {
 
   const cropParameters = cropParametersOnUpload(req);
   const result = await imageResponse.upload(name, files.image.path, cropParameters);
+  stats.uploads.incrementAndGet();
   log('info', `Finished writing original file ${name}`);
   res.json({
     status: 'OK',
@@ -98,32 +130,6 @@ const isDbConnectionAlive = async (db) => {
 		return false;
 	}
 };
-
-const hitCounter = IntegerCounter();
-const missCounter = IntegerCounter();
-
-const startedAt = new Date();
-
-const stats = {
-  hits: hitCounter,
-  misses: missCounter,
-  get: () => {
-      const hits = hitCounter.get();
-      const misses = missCounter.get();
-      const total = (hits + misses);
-      const datetime = new Date().toISOString();
-      const uptimeInMinutes = (new Date() - startedAt) / 1000 / 60;
-      const generationsPerMinute = misses / uptimeInMinutes;
-      return {
-          datetime,
-          hits,
-          misses,
-          generationsPerMinute,
-          cacheHitRatio: (Math.round(hits * 100 / total) / 100) || 0
-      };
-  }
-};
-let statsPrinter;
 
 const server = express();
 server.use(bodyParser.json());

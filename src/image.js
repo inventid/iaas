@@ -20,9 +20,10 @@ if (config.has('timeout.conversion')) {
   }
 }
 
-log('info', `Booting gm with the following options: ${JSON.stringify(gmOptions)}`);
+const options = Object.assign({}, {imageMagick: true}, gmOptions);
+log('info', `Booting gm with the following options: ${JSON.stringify(options)}`);
 
-const im = gm.subClass({imageMagick: true});
+const im = gm.subClass(options);
 
 // 10 seconds
 const clearTempfilesTimeout = 10000;
@@ -184,7 +185,7 @@ export default {
     }
   },
   imageSize: async function (path) {
-    return size(im(path));
+    return size(im(path).options(gmOptions));
   },
   imageArea: async function (path) {
     try {

@@ -145,24 +145,18 @@ export default {
 
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params, response);
-    browserImage.toBuffer(params.type, (err, buffer) => {
+    browserImage.toBuffer(params.type, (err, browserBuffer) => {
       if (err) {
         response.status(500).end();
         log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
         return;
       }
 
-      response.end(buffer);
-      log('info', `Creating live image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
-    });
+      log('info', `Creating image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
 
-    const awsStartTime = new Date();
-    const awsImage = await image.magic(imagePath(params.name), params, response);
-    awsImage.toBuffer(params.type, (err, buffer) => {
-      if (!err) {
-        log('info', `Creating AWS image took ${new Date() - awsStartTime}ms: ${imageDescription}`);
-        aws(cache)(imageKey(params), params, buffer);
-      }
+      const awsBuffer = Buffer.from(browserBuffer);
+      response.end(browserBuffer);
+      aws(cache)(imageKey(params), params, awsBuffer);
     });
   },
   original: async function (db, params, method, response) {

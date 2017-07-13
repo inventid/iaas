@@ -7,7 +7,10 @@ function typeOrError(type) {
   throw new Error('invalid type for a metric supplied');
 }
 
-export default function newMetric(metricType, {fields, tags} = {fields: [], tags: []}, stop = undefined, start = undefined) {
+export default function newMetric(metricType, {fields, tags} = {
+  fields: [],
+  tags: []
+}, stop = undefined, start = undefined) {
   const type = typeOrError(metricType);
   const startTime = start || new Date();
 

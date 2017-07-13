@@ -12,7 +12,7 @@ export default (db) => {
     return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
   };
 
-  const cleanup = async() => {
+  const cleanup = async () => {
     try {
       const result = await promiseQuery(deleteOldTokens, []);
       log('info', `Cleaned ${result.rowCount} tokens from the db`);
@@ -21,7 +21,7 @@ export default (db) => {
     }
   };
   return {
-    createToken: async(id) => {
+    createToken: async (id) => {
       const newToken = uuid();
       try {
         await promiseQuery(insertToken, [newToken, id]);
@@ -36,7 +36,7 @@ export default (db) => {
         return null;
       }
     },
-    consume: async(token, id) => {
+    consume: async (token, id) => {
       const vars = [token, id];
       try {
         const result = await promiseQuery(consumeToken, vars);

@@ -5,7 +5,7 @@ import migrateAndStart from "pg-migration";
 import pg from "pg";
 import formidable from "formidable";
 import log from "./log";
-import urlParameters, { hasFiltersApplied } from "./urlParameters";
+import urlParameters, {hasFiltersApplied} from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined, roundedRatio} from "./helper";
@@ -29,27 +29,27 @@ const uploadCounter = IntegerCounter();
 const startedAt = new Date();
 
 const stats = {
-    hits: hitCounter,
-    misses: missCounter,
-    uploads: uploadCounter,
-    get: () => {
-        const hits = hitCounter.get();
-        const misses = missCounter.get();
-        const uploads = uploadCounter.get();
-        const total = (hits + misses);
-        const datetime = new Date().toISOString();
-        const uptimeInSeconds = (new Date() - startedAt) / 1000;
-        const generationsPerMinute = roundedRatio(misses, uptimeInSeconds / 60);
-        return {
-            datetime,
-            hits,
-            misses,
-            uploads,
-            uptimeInSeconds,
-            generationsPerMinute,
-            cacheHitRatio: roundedRatio(hits, total)
-        };
-    }
+  hits: hitCounter,
+  misses: missCounter,
+  uploads: uploadCounter,
+  get: () => {
+    const hits = hitCounter.get();
+    const misses = missCounter.get();
+    const uploads = uploadCounter.get();
+    const total = (hits + misses);
+    const datetime = new Date().toISOString();
+    const uptimeInSeconds = (new Date() - startedAt) / 1000;
+    const generationsPerMinute = roundedRatio(misses, uptimeInSeconds / 60);
+    return {
+      datetime,
+      hits,
+      misses,
+      uploads,
+      uptimeInSeconds,
+      generationsPerMinute,
+      cacheHitRatio: roundedRatio(hits, total)
+    };
+  }
 };
 let statsPrinter;
 
@@ -79,7 +79,7 @@ const cropParametersOnUpload = (req) => {
   return null;
 };
 
-const uploadImage = async(req, res) => {
+const uploadImage = async (req, res) => {
   const sentToken = req.headers['x-token'];
   const name = req.params.name;
   log('info', `Requested image upload for image_id ${name} with token ${sentToken}`);
@@ -120,16 +120,16 @@ const uploadImage = async(req, res) => {
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
 
 const isDbConnectionAlive = async (db) => {
-	const promiseQuery = (query, vars) => {
-		return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
-	};
-	const testQuery = 'SELECT 1';
-	try {
-		const result = await promiseQuery(testQuery, []);
-		return Boolean(result.rowCount && result.rowCount === 1);
-	} catch (e) {
-		return false;
-	}
+  const promiseQuery = (query, vars) => {
+    return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
+  };
+  const testQuery = 'SELECT 1';
+  try {
+    const result = await promiseQuery(testQuery, []);
+    return Boolean(result.rowCount && result.rowCount === 1);
+  } catch (e) {
+    return false;
+  }
 };
 
 const server = express();
@@ -184,7 +184,7 @@ server.get('/(:name).(:format)', (req, res) => {
 });
 
 // The upload stuff
-server.post('/token', async(req, res) => {
+server.post('/token', async (req, res) => {
   // Create a token
   const image = req.body.id;
   if (image === null) {
@@ -204,16 +204,16 @@ server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);
 
 const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() => {
-	if (dbEnder) {
-		dbEnder();
-	}
-	if (expressInstance) {
-		expressInstance.close();
-	}
-	if (statsPrinter) {
-		clearInterval(statsPrinter);
-	}
-	process.exit(2);
+  if (dbEnder) {
+    dbEnder();
+  }
+  if (expressInstance) {
+    expressInstance.close();
+  }
+  if (statsPrinter) {
+    clearInterval(statsPrinter);
+  }
+  process.exit(2);
 }, timeout);
 
 pg.connect(connectionString, (err, client, done) => {
@@ -229,13 +229,13 @@ pg.connect(connectionString, (err, client, done) => {
       statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
       const dbChecker = setInterval(() => {
         isDbConnectionAlive(db).then(isAlive => { //eslint-disable-line max-nested-callbacks
-         if (!isAlive) {
-           clearInterval(dbChecker);
-           log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
-           db = null;
-           // Slight timeout to handle some final requests?
-           slowShutdown(done, handler);
-         }
+          if (!isAlive) {
+            clearInterval(dbChecker);
+            log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+            db = null;
+            // Slight timeout to handle some final requests?
+            slowShutdown(done, handler);
+          }
         });
       }, 500);
     });

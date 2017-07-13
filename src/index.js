@@ -10,6 +10,7 @@ import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
+import {metricFromParams} from "./metrics/metrics";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -163,22 +164,22 @@ server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats);
+  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats);
+  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
   if (hasFiltersApplied(params)) {
-    imageResponse.magic(db, params, req.method, res, stats);
+    imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
   } else {
-    imageResponse.original(db, params, req.method, res);
+    imageResponse.original(db, params, req.method, res, metricFromParams(params));
   }
 });
 

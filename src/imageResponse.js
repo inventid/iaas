@@ -7,8 +7,10 @@ import dbCache from "./dbCache";
 import image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
+import metricsSetup from './metrics/metrics';
 
 const fs = promisify('fs');
+const metrics = metricsSetup();
 
 const imagePath = (name) => `${config.get('originals_dir')}/${name}`;
 
@@ -16,7 +18,7 @@ const redirectTimeout = config.has('redirect_cache_timeout') ? config.get('redir
 
 // Determine whether the image exists on disk
 // Returns either true of false
-const doesImageExist = async(name) => {
+const doesImageExist = async (name) => {
   try {
     await fs.access(imagePath(name), fs.R_OK);
     return true;
@@ -91,28 +93,34 @@ const sendFoundHeaders = (params, response) => {
 };
 
 const imageKey = params =>
-  `${params.name}_${params.width}x${params.height}.${params.fit}` +
-    `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
+`${params.name}_${params.width}x${params.height}.${params.fit}` +
+`.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
 
 
 export default {
-  magic: async function (db, params, method, response, stats = undefined) {
+  magic: async function (db, params, method, response, stats = undefined, metric = undefined) {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
       response.status(400).end();
+      metric.addTag('status', 400);
+      metrics.write(metric);
       return;
     }
 
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
+      metric.addTag('status', 404);
+      metrics.write(metric);
       return;
     }
 
     // Image exists
     if (!isRequestedImageWithinBounds(params)) {
       redirectImageToWithinBounds(await calculateNewBounds(params), response);
+      metric.addTag('status', 307);
+      metrics.write(metric);
       return;
     }
 
@@ -122,6 +130,7 @@ export default {
     if (isHeadRequest(method)) {
       response.status(200).end();
       log('debug', `HEAD request for ${imageDescription} can be served`);
+      // No metrics here
       return;
     }
     log('debug', `Request for ${imageDescription}`);
@@ -133,6 +142,10 @@ export default {
         stats.hits.incrementAndGet();
       }
       redirectToCachedEntity(cacheValue, params, response);
+      metric.addTag('status', 200);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy('redirect'));
       return;
     }
     if (stats) {
@@ -148,6 +161,10 @@ export default {
     browserImage.toBuffer(params.type, (err, browserBuffer) => {
       if (err) {
         response.status(500).end();
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy('generation'));
         log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
         return;
       }
@@ -156,14 +173,21 @@ export default {
 
       const awsBuffer = Buffer.from(browserBuffer);
       response.end(browserBuffer);
+      metric.addTag('status', 200);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy('generation'));
+
       aws(cache)(imageKey(params), params, awsBuffer);
     });
   },
-  original: async function (db, params, method, response) {
+  original: async function (db, params, method, response, metric = undefined) {
     const startTime = new Date();
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
+      metric.addTag('status', 404);
+      metrics.write(metric);
       return;
     }
     response.status(200).set({
@@ -174,6 +198,10 @@ export default {
     });
     const data = await fs.readFile(imagePath(params.name));
     response.end(data);
+    metric.addTag('status', 200);
+    metric.stop();
+    metrics.write(metric);
+    metrics.write(metric.copy('original'));
     log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
   },
   upload: async function (name, path, cropParameters) {

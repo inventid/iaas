@@ -17,9 +17,11 @@ export default function newMetric(metricType, {fields, tags} = {
   return {
     addField(key, value) {
       fields[key] = value;
+      return this;
     },
     addTag(key, value) {
       tags[key] = value;
+      return this;
     },
     get() {
       const duration = (stop || new Date()) - startTime;

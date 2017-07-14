@@ -5,9 +5,17 @@ import console from './console';
 import influx from './influx';
 import timingMetric from './timingMetric';
 
-export const VALID_TYPES = ['request', 'redirect', 'generation', 'uploadToCache', 'upload', 'original'];
+export const REQUEST = 'request';
+export const REDIRECT = 'redirect';
+export const GENERATION = 'generation';
+export const UPLOAD_TO_CACHE = 'uploadToCache';
+export const UPLOAD = 'upload';
+export const ORIGINAL = 'original';
+export const REQUEST_TOKEN = 'requestToken';
 
-export function metricFromParams(params, type = VALID_TYPES[0]) {
+export const VALID_TYPES = [REQUEST, REDIRECT, GENERATION, UPLOAD_TO_CACHE, UPLOAD, ORIGINAL, REQUEST_TOKEN];
+
+export function metricFromParams(params, type = REQUEST) {
   const fields = {
     name: params.name,
     width: params.width,
@@ -22,15 +30,15 @@ export function metricFromParams(params, type = VALID_TYPES[0]) {
   return timingMetric(type, {fields, tags});
 }
 
-export default function setup() {
+function setup() {
   const metricImplementations = [];
   if (config.has('metrics.influx')) {
     log('info', 'Setting up influx metrics');
-    metricImplementations.push(influx());
+    metricImplementations.push(influx);
   }
   if (config.has('metrics.console')) {
     log('info', 'Setting up console metrics');
-    metricImplementations.push(console());
+    metricImplementations.push(console);
   }
   return {
     write(metric) {
@@ -38,3 +46,6 @@ export default function setup() {
     }
   };
 }
+
+const instance = setup();
+export default instance;

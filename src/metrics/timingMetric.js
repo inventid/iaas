@@ -1,4 +1,4 @@
-import {VALID_TYPES} from './metrics';
+import {VALID_TYPES} from './index';
 
 function typeOrError(type) {
   if (VALID_TYPES.includes(type)) {
@@ -8,11 +8,13 @@ function typeOrError(type) {
 }
 
 export default function newMetric(metricType, {fields, tags} = {
-  fields: [],
-  tags: []
+  fields: {},
+  tags: {}
 }, stop = undefined, start = undefined) {
   const type = typeOrError(metricType);
   const startTime = start || new Date();
+  fields = Object.assign({}, fields);
+  tags = Object.assign({}, tags);
 
   return {
     addField(key, value) {

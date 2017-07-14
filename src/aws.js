@@ -2,10 +2,9 @@ import AWS from "aws-sdk";
 import config from "config";
 import {futureDate} from "./helper";
 import log from "./log";
-import metricsSetup from './metrics/metrics';
-import {metricFromParams} from './metrics/metrics';
+import metrics from './metrics';
+import {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
 
-const metrics = metricsSetup();
 
 // The AWS config needs to be set before this object is created
 AWS.config.update({
@@ -46,7 +45,7 @@ export default (cache) => async (name, params, data) => {
 
   const startTime = new Date();
   try {
-    const metric = metricFromParams(params, 'uploadToCache');
+    const metric = metricFromParams(params, UPLOAD_TO_CACHE);
     await upload(S3, uploadParams);
     metrics.write(metric);
   } catch (e) {

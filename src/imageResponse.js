@@ -7,10 +7,10 @@ import dbCache from "./dbCache";
 import image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
-import metricsSetup from './metrics/metrics';
+import metrics from './metrics';
+import {REDIRECT, GENERATION, ORIGINAL} from './metrics';
 
 const fs = promisify('fs');
-const metrics = metricsSetup();
 
 const imagePath = (name) => `${config.get('originals_dir')}/${name}`;
 
@@ -103,24 +103,30 @@ export default {
     if (params === null) {
       // Invalid, hence reject
       response.status(400).end();
-      metric.addTag('status', 400);
-      metrics.write(metric);
+      if (metric) {
+        metric.addTag('status', 400);
+        metrics.write(metric);
+      }
       return;
     }
 
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
-      metric.addTag('status', 404);
-      metrics.write(metric);
+      if (metric) {
+        metric.addTag('status', 404);
+        metrics.write(metric);
+      }
       return;
     }
 
     // Image exists
     if (!isRequestedImageWithinBounds(params)) {
       redirectImageToWithinBounds(await calculateNewBounds(params), response);
-      metric.addTag('status', 307);
-      metrics.write(metric);
+      if (metric) {
+        metric.addTag('status', 307);
+        metrics.write(metric);
+      }
       return;
     }
 
@@ -142,10 +148,12 @@ export default {
         stats.hits.incrementAndGet();
       }
       redirectToCachedEntity(cacheValue, params, response);
-      metric.addTag('status', 200);
-      metric.stop();
-      metrics.write(metric);
-      metrics.write(metric.copy('redirect'));
+      if (metric) {
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(REDIRECT));
+      }
       return;
     }
     if (stats) {
@@ -161,10 +169,12 @@ export default {
     browserImage.toBuffer(params.type, (err, browserBuffer) => {
       if (err) {
         response.status(500).end();
-        metric.addTag('status', 200);
-        metric.stop();
-        metrics.write(metric);
-        metrics.write(metric.copy('generation'));
+        if (metric) {
+          metric.addTag('status', 200);
+          metric.stop();
+          metrics.write(metric);
+          metrics.write(metric.copy(GENERATION));
+        }
         log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
         return;
       }
@@ -173,11 +183,12 @@ export default {
 
       const awsBuffer = Buffer.from(browserBuffer);
       response.end(browserBuffer);
-      metric.addTag('status', 200);
-      metric.stop();
-      metrics.write(metric);
-      metrics.write(metric.copy('generation'));
-
+      if (metric) {
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(GENERATION));
+      }
       aws(cache)(imageKey(params), params, awsBuffer);
     });
   },
@@ -186,8 +197,10 @@ export default {
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
-      metric.addTag('status', 404);
-      metrics.write(metric);
+      if (metric) {
+        metric.addTag('status', 404);
+        metrics.write(metric);
+      }
       return;
     }
     response.status(200).set({
@@ -198,10 +211,12 @@ export default {
     });
     const data = await fs.readFile(imagePath(params.name));
     response.end(data);
-    metric.addTag('status', 200);
-    metric.stop();
-    metrics.write(metric);
-    metrics.write(metric.copy('original'));
+    if (metric) {
+      metric.addTag('status', 200);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy(ORIGINAL));
+    }
     log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
   },
   upload: async function (name, path, cropParameters) {

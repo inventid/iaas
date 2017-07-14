@@ -10,7 +10,7 @@ import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
-import {metricFromParams} from "./metrics/metrics";
+import {metricFromParams} from "./metrics";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len

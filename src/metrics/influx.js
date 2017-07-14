@@ -17,7 +17,6 @@ function setup() {
         tags: Object.assign({}, metricPoint.tags, {type: metricPoint.type}),
         fields: Object.assign({}, metricPoint.fields, {duration: metricPoint.duration})
       };
-      console.log(influxMetric);
       influx.writePoints([
         influxMetric
       ]).catch(err => {

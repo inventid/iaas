@@ -10,7 +10,8 @@ import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
-import {metricFromParams} from "./metrics";
+import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
+import timingMetric from "./metrics/timingMetric";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -83,10 +84,13 @@ const uploadImage = async (req, res) => {
   const sentToken = req.headers['x-token'];
   const name = req.params.name;
   log('info', `Requested image upload for image_id ${name} with token ${sentToken}`);
+  const metric = timingMetric(UPLOAD, {fields: {name: name}});
 
   const canConsumeToken = await token(db).consume(sentToken, name);
   if (!canConsumeToken) {
     res.status(403).end();
+    metric.addTag('status', 403);
+    metrics.write(metric);
     return;
   }
 
@@ -95,6 +99,8 @@ const uploadImage = async (req, res) => {
   const files = await promiseUpload(form, req);
   if (!files.image || !files.image.path) {
     res.status(400).end();
+    metric.addTag('status', 400);
+    metrics.write(metric);
     return;
   }
 
@@ -102,6 +108,8 @@ const uploadImage = async (req, res) => {
   if (!isAllowedToHandle) {
     log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
     res.status(413).end();
+    metric.addTag('status', 413);
+    metrics.write(metric);
     return;
   }
 
@@ -115,6 +123,8 @@ const uploadImage = async (req, res) => {
     original_height: result.originalHeight,
     original_width: result.originalWidth
   });
+  metric.addTag('status', 200);
+  metrics.write(metric);
 };
 
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
@@ -187,8 +197,11 @@ server.get('/(:name).(:format)', (req, res) => {
 server.post('/token', async (req, res) => {
   // Create a token
   const image = req.body.id;
+  const metric = timingMetric(REQUEST_TOKEN, {fields: {name: image}});
   if (image === null) {
     res.status(400).end();
+    metric.addTag('status', 400);
+    metrics.write(metric);
     return;
   }
   const tokenBackend = token(db);
@@ -196,9 +209,13 @@ server.post('/token', async (req, res) => {
   if (!newToken) {
     // Duplicate
     res.status(403).json({error: 'The requested image_id is already requested'});
+    metric.addTag('status', 403);
+    metrics.write(metric);
     return;
   }
   res.json({token: newToken});
+  metric.addTag('status', 200);
+  metrics.write(metric);
 });
 server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);

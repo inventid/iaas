@@ -14,7 +14,7 @@ function setup() {
       const metricPoint = metric.get();
       const influxMetric = {
         measurement: 'response_times',
-        tags: Object.assign({}, metricPoint.tags, {type: metricPoint.type}),
+        tags: Object.assign({}, metricPoint.tags, {request_type: metricPoint.type}),
         fields: Object.assign({}, metricPoint.fields, {duration: metricPoint.duration})
       };
       influx.writePoints([

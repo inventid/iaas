@@ -37,7 +37,7 @@ const size = (client) => {
 };
 
 // Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
-const interlace = async(client, params) => {
+const interlace = async (client, params) => {
   if (params.mime === 'image/jpeg') {
     return client.interlace('Line');
   }
@@ -46,7 +46,7 @@ const interlace = async(client, params) => {
 
 // When cropping, we size the image first to fix completely within the bounding box
 // Then we crop the requested size, and center to the center of the image
-const crop = async(client, params) => {
+const crop = async (client, params) => {
   // Resize the image to fit within the bounding box
   // The ^ ensures the images is resized while maintaining the ratio
   // However the sizes are treated as minimum values instead of maximum values
@@ -72,31 +72,31 @@ const crop = async(client, params) => {
 
 // The sizes in the params given define the bounding box. The image is sized
 // proportionally such that it fits in the bounding box without cropping
-const clip = async(client, params) => {
+const clip = async (client, params) => {
   return client.resize(params.width, params.height);
 };
 
-const cover = async(client, params) => {
+const cover = async (client, params) => {
   return client.resize(params.width, params.height, '^');
 };
 
 // Same as clipping, however the remainder of the bounding box is filled with
 // white.
-const canvas = async(client, params) => {
+const canvas = async (client, params) => {
   client = await clip(client, params);
   return client.gravity('Center').extent(params.width, params.height);
 };
 
 // Fill a transparent background with white
-const background = async(client, params) => {
-	if (params.mime === 'image/jpeg') {
-		return client.background('white').flatten();
-	}
-	return client;
+const background = async (client, params) => {
+  if (params.mime === 'image/jpeg') {
+    return client.background('white').flatten();
+  }
+  return client;
 };
 
 // Fit the image appropriately.
-const fit = async(client, params) => {
+const fit = async (client, params) => {
   //For original format
   if (!params.width || !params.height) {
     return client;
@@ -113,7 +113,7 @@ const fit = async(client, params) => {
   throw new Error(`Format '${params.fit}' was accepted but could not be handled`);
 };
 
-const setQuality = async(client, params) => {
+const setQuality = async (client, params) => {
   if (params.quality === -1) {
     return client;
   }
@@ -131,7 +131,7 @@ const setQuality = async(client, params) => {
 };
 
 // Blur the image if requested in the params
-const blur = async(client, params) => {
+const blur = async (client, params) => {
   if (params.blur === null) {
     return client;
   }
@@ -152,7 +152,7 @@ export default {
     // if possible, crop first (since the UA had that orientation), then orient
     if (cropParameters) {
       const cropped = im(source).options(gmOptions)
-          .crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
+        .crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
       try {
         await write(cropped, source);
       } catch (e) {

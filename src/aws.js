@@ -2,6 +2,9 @@ import AWS from "aws-sdk";
 import config from "config";
 import {futureDate} from "./helper";
 import log from "./log";
+import metrics from './metrics';
+import {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
+
 
 // The AWS config needs to be set before this object is created
 AWS.config.update({
@@ -25,7 +28,7 @@ const cacheHost = () => {
   }
 };
 
-export default (cache) => async(name, params, data) => {
+export default (cache) => async (name, params, data) => {
   // See https://github.com/inventid/iaas/issues/78
   const renderedAt = new Date();
   const savedName = `${renderedAt.toISOString()}_${name}`;
@@ -42,7 +45,9 @@ export default (cache) => async(name, params, data) => {
 
   const startTime = new Date();
   try {
+    const metric = metricFromParams(params, UPLOAD_TO_CACHE);
     await upload(S3, uploadParams);
+    metrics.write(metric);
   } catch (e) {
     log('error', `AWS upload error: ${JSON.stringify(e)}`);
     return;

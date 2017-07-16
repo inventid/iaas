@@ -7,6 +7,8 @@ import dbCache from "./dbCache";
 import image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
+import metrics from './metrics';
+import {REDIRECT, GENERATION, ORIGINAL} from './metrics';
 
 const fs = promisify('fs');
 
@@ -16,7 +18,7 @@ const redirectTimeout = config.has('redirect_cache_timeout') ? config.get('redir
 
 // Determine whether the image exists on disk
 // Returns either true of false
-const doesImageExist = async(name) => {
+const doesImageExist = async (name) => {
   try {
     await fs.access(imagePath(name), fs.R_OK);
     return true;
@@ -91,28 +93,40 @@ const sendFoundHeaders = (params, response) => {
 };
 
 const imageKey = params =>
-  `${params.name}_${params.width}x${params.height}.${params.fit}` +
-    `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
+`${params.name}_${params.width}x${params.height}.${params.fit}` +
+`.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
 
 
 export default {
-  magic: async function (db, params, method, response, stats = undefined) {
+  magic: async function (db, params, method, response, stats = undefined, metric = undefined) {
     const cache = dbCache(db);
     if (params === null) {
       // Invalid, hence reject
       response.status(400).end();
+      if (metric) {
+        metric.addTag('status', 400);
+        metrics.write(metric);
+      }
       return;
     }
 
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
+      if (metric) {
+        metric.addTag('status', 404);
+        metrics.write(metric);
+      }
       return;
     }
 
     // Image exists
     if (!isRequestedImageWithinBounds(params)) {
       redirectImageToWithinBounds(await calculateNewBounds(params), response);
+      if (metric) {
+        metric.addTag('status', 307);
+        metrics.write(metric);
+      }
       return;
     }
 
@@ -122,6 +136,7 @@ export default {
     if (isHeadRequest(method)) {
       response.status(200).end();
       log('debug', `HEAD request for ${imageDescription} can be served`);
+      // No metrics here
       return;
     }
     log('debug', `Request for ${imageDescription}`);
@@ -133,6 +148,12 @@ export default {
         stats.hits.incrementAndGet();
       }
       redirectToCachedEntity(cacheValue, params, response);
+      if (metric) {
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(REDIRECT));
+      }
       return;
     }
     if (stats) {
@@ -148,6 +169,12 @@ export default {
     browserImage.toBuffer(params.type, (err, browserBuffer) => {
       if (err) {
         response.status(500).end();
+        if (metric) {
+          metric.addTag('status', 200);
+          metric.stop();
+          metrics.write(metric);
+          metrics.write(metric.copy(GENERATION));
+        }
         log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
         return;
       }
@@ -156,14 +183,24 @@ export default {
 
       const awsBuffer = Buffer.from(browserBuffer);
       response.end(browserBuffer);
+      if (metric) {
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(GENERATION));
+      }
       aws(cache)(imageKey(params), params, awsBuffer);
     });
   },
-  original: async function (db, params, method, response) {
+  original: async function (db, params, method, response, metric = undefined) {
     const startTime = new Date();
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
       response.status(404).end();
+      if (metric) {
+        metric.addTag('status', 404);
+        metrics.write(metric);
+      }
       return;
     }
     response.status(200).set({
@@ -174,6 +211,12 @@ export default {
     });
     const data = await fs.readFile(imagePath(params.name));
     response.end(data);
+    if (metric) {
+      metric.addTag('status', 200);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy(ORIGINAL));
+    }
     log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
   },
   upload: async function (name, path, cropParameters) {

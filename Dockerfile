@@ -25,8 +25,10 @@ RUN cd /opt/iaas && npm install
 
 # Add the application
 ADD src/*.js /opt/iaas/src/
+ADD src/metrics/*.js /opt/iaas/src/metrics/
 ADD migrations /opt/iaas/migrations/
 RUN cd /opt/iaas/src && babel -d ../ *.js
+RUN cd /opt/iaas/src/metrics && babel -d ../../metrics *.js
 
 # Run the entire thing!
 WORKDIR /opt/iaas

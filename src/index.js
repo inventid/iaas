@@ -5,11 +5,13 @@ import migrateAndStart from "pg-migration";
 import pg from "pg";
 import formidable from "formidable";
 import log from "./log";
-import urlParameters, { hasFiltersApplied } from "./urlParameters";
+import urlParameters, {hasFiltersApplied} from "./urlParameters";
 import imageResponse from "./imageResponse";
 import token from "./token";
 import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
+import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
+import timingMetric from "./metrics/timingMetric";
 
 let db;
 const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
@@ -28,27 +30,27 @@ const uploadCounter = IntegerCounter();
 const startedAt = new Date();
 
 const stats = {
-    hits: hitCounter,
-    misses: missCounter,
-    uploads: uploadCounter,
-    get: () => {
-        const hits = hitCounter.get();
-        const misses = missCounter.get();
-        const uploads = uploadCounter.get();
-        const total = (hits + misses);
-        const datetime = new Date().toISOString();
-        const uptimeInSeconds = (new Date() - startedAt) / 1000;
-        const generationsPerMinute = roundedRatio(misses, uptimeInSeconds / 60);
-        return {
-            datetime,
-            hits,
-            misses,
-            uploads,
-            uptimeInSeconds,
-            generationsPerMinute,
-            cacheHitRatio: roundedRatio(hits, total)
-        };
-    }
+  hits: hitCounter,
+  misses: missCounter,
+  uploads: uploadCounter,
+  get: () => {
+    const hits = hitCounter.get();
+    const misses = missCounter.get();
+    const uploads = uploadCounter.get();
+    const total = (hits + misses);
+    const datetime = new Date().toISOString();
+    const uptimeInSeconds = (new Date() - startedAt) / 1000;
+    const generationsPerMinute = roundedRatio(misses, uptimeInSeconds / 60);
+    return {
+      datetime,
+      hits,
+      misses,
+      uploads,
+      uptimeInSeconds,
+      generationsPerMinute,
+      cacheHitRatio: roundedRatio(hits, total)
+    };
+  }
 };
 let statsPrinter;
 
@@ -78,14 +80,17 @@ const cropParametersOnUpload = (req) => {
   return null;
 };
 
-const uploadImage = async(req, res) => {
+const uploadImage = async (req, res) => {
   const sentToken = req.headers['x-token'];
   const name = req.params.name;
   log('info', `Requested image upload for image_id ${name} with token ${sentToken}`);
+  const metric = timingMetric(UPLOAD, {fields: {name: name}});
 
   const canConsumeToken = await token(db).consume(sentToken, name);
   if (!canConsumeToken) {
     res.status(403).end();
+    metric.addTag('status', 403);
+    metrics.write(metric);
     return;
   }
 
@@ -94,6 +99,8 @@ const uploadImage = async(req, res) => {
   const files = await promiseUpload(form, req);
   if (!files.image || !files.image.path) {
     res.status(400).end();
+    metric.addTag('status', 400);
+    metrics.write(metric);
     return;
   }
 
@@ -101,6 +108,8 @@ const uploadImage = async(req, res) => {
   if (!isAllowedToHandle) {
     log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
     res.status(413).end();
+    metric.addTag('status', 413);
+    metrics.write(metric);
     return;
   }
 
@@ -114,21 +123,23 @@ const uploadImage = async(req, res) => {
     original_height: result.originalHeight,
     original_width: result.originalWidth
   });
+  metric.addTag('status', 200);
+  metrics.write(metric);
 };
 
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
 
 const isDbConnectionAlive = async (db) => {
-	const promiseQuery = (query, vars) => {
-		return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
-	};
-	const testQuery = 'SELECT 1';
-	try {
-		const result = await promiseQuery(testQuery, []);
-		return Boolean(result.rowCount && result.rowCount === 1);
-	} catch (e) {
-		return false;
-	}
+  const promiseQuery = (query, vars) => {
+    return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
+  };
+  const testQuery = 'SELECT 1';
+  try {
+    const result = await promiseQuery(testQuery, []);
+    return Boolean(result.rowCount && result.rowCount === 1);
+  } catch (e) {
+    return false;
+  }
 };
 
 const server = express();
@@ -163,31 +174,34 @@ server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats);
+  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats);
+  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
   if (hasFiltersApplied(params)) {
-    imageResponse.magic(db, params, req.method, res, stats);
+    imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
   } else {
-    imageResponse.original(db, params, req.method, res);
+    imageResponse.original(db, params, req.method, res, metricFromParams(params));
   }
 });
 
 // The upload stuff
-server.post('/token', async(req, res) => {
+server.post('/token', async (req, res) => {
   // Create a token
   const image = req.body.id;
+  const metric = timingMetric(REQUEST_TOKEN, {fields: {name: image}});
   if (image === null) {
     res.status(400).end();
+    metric.addTag('status', 400);
+    metrics.write(metric);
     return;
   }
   const tokenBackend = token(db);
@@ -195,24 +209,28 @@ server.post('/token', async(req, res) => {
   if (!newToken) {
     // Duplicate
     res.status(403).json({error: 'The requested image_id is already requested'});
+    metric.addTag('status', 403);
+    metrics.write(metric);
     return;
   }
   res.json({token: newToken});
+  metric.addTag('status', 200);
+  metrics.write(metric);
 });
 server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);
 
 const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() => {
-	if (dbEnder) {
-		dbEnder();
-	}
-	if (expressInstance) {
-		expressInstance.close();
-	}
-	if (statsPrinter) {
-		clearInterval(statsPrinter);
-	}
-	process.exit(2);
+  if (dbEnder) {
+    dbEnder();
+  }
+  if (expressInstance) {
+    expressInstance.close();
+  }
+  if (statsPrinter) {
+    clearInterval(statsPrinter);
+  }
+  process.exit(2);
 }, timeout);
 
 pg.connect(connectionString, (err, client, done) => {
@@ -228,13 +246,13 @@ pg.connect(connectionString, (err, client, done) => {
       statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
       const dbChecker = setInterval(() => {
         isDbConnectionAlive(db).then(isAlive => { //eslint-disable-line max-nested-callbacks
-         if (!isAlive) {
-           clearInterval(dbChecker);
-           log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
-           db = null;
-           // Slight timeout to handle some final requests?
-           slowShutdown(done, handler);
-         }
+          if (!isAlive) {
+            clearInterval(dbChecker);
+            log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+            db = null;
+            // Slight timeout to handle some final requests?
+            slowShutdown(done, handler);
+          }
         });
       }, 500);
     });

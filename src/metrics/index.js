@@ -31,7 +31,7 @@ export function metricFromParams(params, type = REQUEST) {
   return timingMetric(type, {fields, tags});
 }
 
-function setup() {
+function metricsSetup() {
   const metricImplementations = [];
   if (config.has('metrics.influx')) {
     log('info', 'Setting up influx metrics');
@@ -48,5 +48,5 @@ function setup() {
   };
 }
 
-const instance = setup();
+const instance = metricsSetup();
 export default instance;

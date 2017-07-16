@@ -98,8 +98,7 @@ const imageKey = params =>
 
 
 export default {
-  magic: async function (db, params, method, response, stats = undefined, metric = undefined) {
-    const cache = dbCache(db);
+  magic: async function (params, method, response, stats = undefined, metric = undefined) {
     if (params === null) {
       // Invalid, hence reject
       response.status(400).end();
@@ -141,7 +140,7 @@ export default {
     }
     log('debug', `Request for ${imageDescription}`);
 
-    const cacheValue = await cache.getFromCache(params);
+    const cacheValue = await dbCache.getFromCache(params);
     if (cacheValue) {
       log('debug', `Cache hit for ${imageDescription}`);
       if (stats) {
@@ -189,10 +188,10 @@ export default {
         metrics.write(metric);
         metrics.write(metric.copy(GENERATION));
       }
-      aws(cache)(imageKey(params), params, awsBuffer);
+      aws(imageKey(params), params, awsBuffer);
     });
   },
-  original: async function (db, params, method, response, metric = undefined) {
+  original: async function (params, method, response, metric = undefined) {
     const startTime = new Date();
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {

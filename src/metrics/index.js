@@ -16,10 +16,11 @@ export const REQUEST_TOKEN = 'requestToken';
 export const VALID_TYPES = [REQUEST, REDIRECT, GENERATION, UPLOAD_TO_CACHE, UPLOAD, ORIGINAL, REQUEST_TOKEN];
 
 export function metricFromParams(params, type = REQUEST) {
+  // The -1 handles the case where an original image was requested
   const fields = {
     name: params.name,
-    width: params.width,
-    height: params.height,
+    width: params.width || -1,
+    height: params.height || -1,
     blur_radius: params.blur && params.blur.radius || 0,
     blur_sigma: params.blur && params.blur.sigma || 0,
     type: params.type,

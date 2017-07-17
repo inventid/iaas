@@ -4,7 +4,7 @@ import {futureDate} from "./helper";
 import log from "./log";
 import metrics from './metrics';
 import {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
-
+import database from './databases';
 
 // The AWS config needs to be set before this object is created
 AWS.config.update({
@@ -28,7 +28,7 @@ const cacheHost = () => {
   }
 };
 
-export default (cache) => async (name, params, data) => {
+export default async (name, params, data) => {
   // See https://github.com/inventid/iaas/issues/78
   const renderedAt = new Date();
   const savedName = `${renderedAt.toISOString()}_${name}`;
@@ -57,7 +57,7 @@ export default (cache) => async (name, params, data) => {
   const url = `${cacheHost()}/${savedName}`;
 
   try {
-    const addedSuccessfully = await cache.addToCache(params, url, renderedAt);
+    const addedSuccessfully = await database.addToCache(params, url, renderedAt);
     if (addedSuccessfully) {
       log('info', `Image ${name} was added to cache`);
     } else {

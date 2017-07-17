@@ -9,5 +9,6 @@ build:
   ci:
     - node -v
     - npm -v
+    - apt-get update && apt-get install libpq-dev -y
     - npm install
     - npm run eslint

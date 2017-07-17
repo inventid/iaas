@@ -1,8 +1,8 @@
+import "babel-polyfill";
+
 import express from "express";
 import config from "config";
 import bodyParser from "body-parser";
-import migrateAndStart from "pg-migration";
-import pg from "pg";
 import formidable from "formidable";
 import log from "./log";
 import urlParameters, {hasFiltersApplied} from "./urlParameters";
@@ -12,9 +12,7 @@ import {areAllDefined, roundedRatio} from "./helper";
 import IntegerCounter from "./integerCounter";
 import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
 import timingMetric from "./metrics/timingMetric";
-
-let db;
-const connectionString = `postgres://${config.get('postgresql.user')}:${config.get('postgresql.password')}@${config.get('postgresql.host')}/${config.get('postgresql.database')}`; //eslint-disable-line max-len
+import database from './databases';
 
 const MAX_IMAGE_IN_MP = 30;
 
@@ -86,7 +84,7 @@ const uploadImage = async (req, res) => {
   log('info', `Requested image upload for image_id ${name} with token ${sentToken}`);
   const metric = timingMetric(UPLOAD, {fields: {name: name}});
 
-  const canConsumeToken = await token(db).consume(sentToken, name);
+  const canConsumeToken = await token.consumeToken(sentToken, name);
   if (!canConsumeToken) {
     res.status(403).end();
     metric.addTag('status', 403);
@@ -129,19 +127,6 @@ const uploadImage = async (req, res) => {
 
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
 
-const isDbConnectionAlive = async (db) => {
-  const promiseQuery = (query, vars) => {
-    return new Promise((resolve, reject) => db.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
-  };
-  const testQuery = 'SELECT 1';
-  try {
-    const result = await promiseQuery(testQuery, []);
-    return Boolean(result.rowCount && result.rowCount === 1);
-  } catch (e) {
-    return false;
-  }
-};
-
 const server = express();
 server.use(bodyParser.json());
 server.use((req, res, next) => {
@@ -153,8 +138,9 @@ server.use((req, res, next) => {
   });
   next();
 });
-server.get('/_health', (req, res) => {
-  if (db) {
+server.get('/_health', async (req, res) => {
+  const dbIsOk = await database.isDbAlive();
+  if (dbIsOk) {
     res.status(200).end('OK');
     log('debug', 'Healthcheck OK');
   } else {
@@ -174,22 +160,22 @@ server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
   // Serve a resized image with scaling
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
+  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
   // Serve a resized image
   const params = urlParameters(req);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
+  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
 });
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
   req.once('close', () => onClosedConnection(imageResponse.description(params)));
   if (hasFiltersApplied(params)) {
-    imageResponse.magic(db, params, req.method, res, stats, metricFromParams(params));
+    imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
   } else {
-    imageResponse.original(db, params, req.method, res, metricFromParams(params));
+    imageResponse.original(params, req.method, res, metricFromParams(params));
   }
 });
 
@@ -204,8 +190,7 @@ server.post('/token', async (req, res) => {
     metrics.write(metric);
     return;
   }
-  const tokenBackend = token(db);
-  const newToken = await tokenBackend.createToken(image);
+  const newToken = await token.createToken(image);
   if (!newToken) {
     // Duplicate
     res.status(403).json({error: 'The requested image_id is already requested'});
@@ -220,10 +205,7 @@ server.post('/token', async (req, res) => {
 server.post('/(:name).(:format)', uploadImage);
 server.post('/(:name)', uploadImage);
 
-const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() => {
-  if (dbEnder) {
-    dbEnder();
-  }
+const slowShutdown = (expressInstance, timeout = 100) => setTimeout(() => {
   if (expressInstance) {
     expressInstance.close();
   }
@@ -233,28 +215,24 @@ const slowShutdown = (dbEnder, expressInstance, timeout = 100) => setTimeout(() 
   process.exit(2);
 }, timeout);
 
-pg.connect(connectionString, (err, client, done) => {
+database.migrate((err) => {
   if (err) {
     log('error', `Error fetching client from pool: ${err}`);
-    slowShutdown(done, null, 250);
+    slowShutdown(null, 250);
   } else {
-    db = client;
-    migrateAndStart(db, './migrations', () => {
-      const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
-      const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
-      // Log the stats every 5 minutes if enabled
-      statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
-      const dbChecker = setInterval(() => {
-        isDbConnectionAlive(db).then(isAlive => { //eslint-disable-line max-nested-callbacks
-          if (!isAlive) {
-            clearInterval(dbChecker);
-            log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
-            db = null;
-            // Slight timeout to handle some final requests?
-            slowShutdown(done, handler);
-          }
-        });
-      }, 500);
-    });
+    const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
+    const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+    // Log the stats every 5 minutes if enabled
+    statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
+    const dbChecker = setInterval(async () => {
+      const isAlive = await database.isDbAlive();
+
+      if (!isAlive) {
+        clearInterval(dbChecker);
+        log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+        // Slight timeout to handle some final requests?
+        slowShutdown(handler);
+      }
+    }, 500);
   }
 });

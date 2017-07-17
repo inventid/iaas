@@ -2,7 +2,7 @@ FROM node:6
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
-    apt-get install -y imagemagick && \
+    apt-get install -y imagemagick libpq-dev && \
     apt-get autoremove -y && \
     apt-get clean
 
@@ -26,9 +26,11 @@ RUN cd /opt/iaas && npm install
 # Add the application
 ADD src/*.js /opt/iaas/src/
 ADD src/metrics/*.js /opt/iaas/src/metrics/
+ADD src/databases/*.js /opt/iaas/src/databases/
 ADD migrations /opt/iaas/migrations/
 RUN cd /opt/iaas/src && babel -d ../ *.js
 RUN cd /opt/iaas/src/metrics && babel -d ../../metrics *.js
+RUN cd /opt/iaas/src/databases && babel -d ../../databases *.js
 
 # Run the entire thing!
 WORKDIR /opt/iaas

@@ -1,5 +1,3 @@
-import "babel-polyfill";
-
 import uuid from "uuid/v4";
 import log from "./log";
 

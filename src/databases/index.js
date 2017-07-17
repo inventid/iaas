@@ -1,5 +1,3 @@
-import "babel-polyfill";
-
 import config from 'config';
 
 import log from '../log';

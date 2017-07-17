@@ -1,5 +1,3 @@
-import "babel-polyfill";
-
 import AWS from "aws-sdk";
 import config from "config";
 import {futureDate} from "./helper";

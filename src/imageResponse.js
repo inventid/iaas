@@ -160,7 +160,7 @@ export default {
     }
 
     // Image is present but not in the correct setting
-    log('info', `Cache miss for ${imageDescription}`);
+    log('debug', `Cache miss for ${imageDescription}`);
     sendFoundHeaders(params, response);
 
     const clientStartTime = new Date();

@@ -12,6 +12,7 @@ export default {
       await database.createToken(id, newToken);
       log('info', 'Created token successfully');
       if (shouldRunCleanup()) {
+        log('info', 'Running token database cleanup');
         await database.cleanupTokens();
       }
       return newToken;

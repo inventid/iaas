@@ -36,11 +36,11 @@ function metricsSetup() {
   const metricImplementations = [];
   if (config.has('metrics.influx')) {
     log('info', 'Setting up influx metrics');
-    metricImplementations.push(influx);
+    metricImplementations.push(influx());
   }
   if (config.has('metrics.console')) {
     log('info', 'Setting up console metrics');
-    metricImplementations.push(console);
+    metricImplementations.push(console());
   }
   return {
     write(metric) {

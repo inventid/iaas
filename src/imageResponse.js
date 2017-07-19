@@ -16,6 +16,11 @@ const imagePath = (name) => `${config.get('originals_dir')}/${name}`;
 
 const redirectTimeout = config.has('redirect_cache_timeout') ? config.get('redirect_cache_timeout') : 0;
 
+const didTimeout = (error) => {
+  console.log(error.message);
+  return error.message === 'gm() resulted in a timeout.';
+};
+
 // Determine whether the image exists on disk
 // Returns either true of false
 const doesImageExist = async (name) => {
@@ -164,12 +169,13 @@ export default {
     sendFoundHeaders(params, response);
 
     const clientStartTime = new Date();
-    const browserImage = await image.magic(imagePath(params.name), params, response);
+    const browserImage = await image.magic(imagePath(params.name), params);
     browserImage.toBuffer(params.type, (err, browserBuffer) => {
       if (err) {
-        response.status(500).end();
+        const status = didTimeout(err) ? 504 : 500;
+        response.status(status).end();
         if (metric) {
-          metric.addTag('status', 200);
+          metric.addTag('status', status);
           metric.stop();
           metrics.write(metric);
           metrics.write(metric.copy(GENERATION));

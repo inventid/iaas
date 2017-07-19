@@ -129,8 +129,13 @@ export default function postgresql() {
     });
   }
 
+  async function close() {
+    return await pool.end();
+  }
+
   return {
     migrate,
+    close,
     isDbAlive,
     createToken,
     consumeToken,

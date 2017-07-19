@@ -212,7 +212,7 @@ const slowShutdown = (expressInstance, timeout = 100) => setTimeout(() => {
   if (statsPrinter) {
     clearInterval(statsPrinter);
   }
-  process.exit(2);
+  database.close().then(() => process.exit(2));
 }, timeout);
 
 database.migrate((err) => {

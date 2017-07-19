@@ -30,5 +30,4 @@ function setup() {
   };
 }
 
-const instance = setup();
-export default instance;
+export default setup;

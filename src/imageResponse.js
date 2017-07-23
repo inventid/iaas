@@ -17,7 +17,6 @@ const imagePath = (name) => `${config.get('originals_dir')}/${name}`;
 const redirectTimeout = config.has('redirect_cache_timeout') ? config.get('redirect_cache_timeout') : 0;
 
 const didTimeout = (error) => {
-  console.log(error.message);
   return error.message === 'gm() resulted in a timeout.';
 };
 

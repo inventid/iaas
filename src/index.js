@@ -212,7 +212,12 @@ const slowShutdown = (expressInstance, timeout = 100) => setTimeout(() => {
   if (statsPrinter) {
     clearInterval(statsPrinter);
   }
-  database.close().then(() => process.exit(2));
+
+  // We try to give the database pool back if that is possible. If it does not succeed within 5 seconds we just quit
+  // Most likely the database crashed in that case anyway
+  const onDone = () => process.exit(2);
+  setTimeout(onDone, 5000);
+  database.close().then(onDone);
 }, timeout);
 
 database.migrate((err) => {

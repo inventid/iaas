@@ -1,4 +1,4 @@
-FROM node:6
+FROM node:8.9
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \

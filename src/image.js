@@ -36,6 +36,11 @@ const size = (client) => {
   return new Promise((resolve, reject) => client.size({bufferStream: true}, (err, data) => err ? reject(err) : resolve(data)));
 };
 
+// Strip the image of any profiles or comments
+const strip = async (client) => {
+  return client.strip();
+};
+
 // Interlacing for png isn't efficient (both in filesize as render performance), so we only do it for jpg
 const interlace = async (client, params) => {
   if (params.mime === 'image/jpeg') {
@@ -141,6 +146,7 @@ const blur = async (client, params) => {
 export default {
   magic: async function (file, params) {
     let client = im(file).options(gmOptions);
+    client = await strip(client);
     client = await fit(client, params);
     client = await background(client, params);
     client = await blur(client, params);

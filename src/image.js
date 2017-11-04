@@ -26,7 +26,7 @@ log('info', `Booting gm with the following options: ${JSON.stringify(options)}`)
 const im = gm.subClass(options);
 
 // 10 seconds
-const clearTempfilesTimeout = 10000;
+const CLEAR_TEMP_FILES_TIMEOUT = 10000;
 
 // Wrap these calls in promises so we can use async/await
 const write = (client, file) => {
@@ -61,7 +61,11 @@ const crop = async (client, params) => {
     await write(client, tmpFile);
     client = im(tmpFile).options(gmOptions);
     const imgSize = await size(client);
-    setTimeout(() => fs.unlink(tmpFile), clearTempfilesTimeout);
+    setTimeout(() => fs.unlink(tmpFile, err => {
+      if (err) {
+        log('error', `Tempfile ${tmpFile} could not be deleted`);
+      }
+    }), CLEAR_TEMP_FILES_TIMEOUT);
     return client
       .repage(imgSize.width, imgSize.height, 0, 0)
       .gravity('Center')

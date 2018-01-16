@@ -53,8 +53,18 @@ export default function postgresql() {
   }
 
   async function createToken(id, newToken) {
-    await queryPromise(insertToken, [newToken, id]);
-    return newToken;
+    try {
+      return await queryPromise(insertToken, [newToken, id]);
+    } catch (e) {
+      const message = e.toString();
+      if (message.includes('duplicate key value violates unique constraint')) {
+        // A client re-requested a previously requested image_id token
+        log('warn', `Two image uploading requests for token raced to be saved in the database. Denying this one '${id}'.`);
+      } else {
+        log('error', message);
+      }
+    }
+    return undefined;
   }
 
   async function consumeToken(token, id) {

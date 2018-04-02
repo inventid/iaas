@@ -11,8 +11,8 @@ const logLevels = {
 // Central logging. console.log can be replaced by writing to a logfile for example
 const log = (level, message) => {
   if (logLevels[level] === undefined) {
-    level = 'warn';
     log('error', `Log level '${level}' was declared but not handled`);
+    level = 'warn';
   } else if (logLevels[level]) {
     const obj = {
       datetime: Date.now(),

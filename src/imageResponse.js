@@ -7,8 +7,7 @@ import dbCache from "./dbCache";
 import image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
-import metrics from './metrics';
-import {REDIRECT, GENERATION, ORIGINAL} from './metrics';
+import metrics, {GENERATION, ORIGINAL, REDIRECT} from './metrics';
 
 const fs = promisify('fs');
 
@@ -29,6 +28,31 @@ const doesImageExist = async (name) => {
   } catch (e) {
     return false;
   }
+};
+
+// GM does not always return a nice buffer
+// https://github.com/aheckmann/gm/issues/572#issuecomment-293768810
+const gmToBuffer = (data) => {
+  return new Promise((resolve, reject) => {
+    data.stream((err, stdout, stderr) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      const chunks = [];
+      stdout.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+      // these are 'once' because they can and do fire multiple times for multiple errors,
+      // but this is a promise so you'll have to deal with them one at a time
+      stdout.once('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+      stderr.once('data', (data) => {
+        reject(String(data));
+      })
+    });
+  });
 };
 
 const isRequestedImageWithinBounds = (params) => {
@@ -97,8 +121,8 @@ const sendFoundHeaders = (params, response) => {
 };
 
 const imageKey = params =>
-`${params.name}_${params.width}x${params.height}.${params.fit}` +
-`.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
+  `${params.name}_${params.width}x${params.height}.${params.fit}` +
+  `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
 
 
 export default {
@@ -169,20 +193,8 @@ export default {
 
     const clientStartTime = new Date();
     const browserImage = await image.magic(imagePath(params.name), params);
-    browserImage.toBuffer(params.type, (err, browserBuffer) => {
-      if (err) {
-        const status = didTimeout(err) ? 504 : 500;
-        response.status(status).end();
-        if (metric) {
-          metric.addTag('status', status);
-          metric.stop();
-          metrics.write(metric);
-          metrics.write(metric.copy(GENERATION));
-        }
-        log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
-        return;
-      }
-
+    try {
+      const browserBuffer = await gmToBuffer(browserImage);
       log('info', `Creating image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
 
       const awsBuffer = Buffer.from(browserBuffer);
@@ -194,7 +206,18 @@ export default {
         metrics.write(metric.copy(GENERATION));
       }
       aws(imageKey(params), params, awsBuffer);
-    });
+    }
+    catch (err) {
+      const status = didTimeout(err) ? 504 : 500;
+      response.status(status).end();
+      if (metric) {
+        metric.addTag('status', status);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(GENERATION));
+      }
+      log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
+    }
   },
   original: async function (params, method, response, metric = undefined) {
     const startTime = new Date();

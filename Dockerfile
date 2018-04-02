@@ -2,7 +2,7 @@ FROM node:8.9
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
-    apt-get install -y imagemagick libpq-dev && \
+    apt-get install -y imagemagick libpq-dev webp libwebp-dev && \
     apt-get autoremove -y && \
     apt-get clean
 
@@ -31,6 +31,9 @@ ADD migrations /opt/iaas/migrations/
 RUN cd /opt/iaas/src && babel -d ../ *.js
 RUN cd /opt/iaas/src/metrics && babel -d ../../metrics *.js
 RUN cd /opt/iaas/src/databases && babel -d ../../databases *.js
+
+# Dump the image magick version for clarity
+RUN convert -version
 
 # Run the entire thing!
 WORKDIR /opt/iaas

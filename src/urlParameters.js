@@ -1,11 +1,21 @@
 import {areAllDefined} from "./helper";
 import log from "./log";
+import config from "config";
 
 const BLUR_RADIUS = Number(process.env.BLUR_RADIUS) || 15; //eslint-disable-line no-process-env
 const BLUR_SIGMA = Number(process.env.BLUR_SIGMA) || 7; //eslint-disable-line no-process-env
 
-const ALLOWED_TYPES = ['jpg', 'jpeg', 'jfif', 'jpe', 'png'];
+const WEBP_MIME_TYPE = 'image/webp';
+const ALLOWED_TYPES = ['jpg', 'jpeg', 'jfif', 'jpe', 'png', 'webp'];
 const ALLOWED_FITS = ['clip', 'crop', 'canvas', 'cover'];
+
+const ALLOW_DYNAMIC_SWITCH_TO_WEBP = (config.has('webp') && config.has('webp.allow_dynamic_switch')
+  && config.get('webp.allow_dynamic_switch'));
+const ALLOW_WEBP_OPT_IN = (config.has('webp') && config.has('webp.allow_opt_in')
+  && config.get('webp.allow_opt_in'));
+
+log('info', `Allowing dynamic switch to webp: ${ALLOW_DYNAMIC_SWITCH_TO_WEBP ? 'true' : false}`);
+log('info', `Allowing opt in for webp: ${ALLOW_WEBP_OPT_IN ? 'true' : false}`);
 
 const getMimeFromExtension = (extension) => {
   switch (extension) {
@@ -16,6 +26,8 @@ const getMimeFromExtension = (extension) => {
       return 'image/jpeg';
     case 'png':
       return 'image/png';
+    case 'webp':
+      return WEBP_MIME_TYPE;
     default:
       return null;
   }
@@ -47,7 +59,18 @@ export default (req, requireDimensions = true) => {
   if (ALLOWED_TYPES.includes(req.params.format.toLowerCase())) {
     result.type = req.params.format.toLowerCase();
     result.mime = getMimeFromExtension(result.type);
+
+    const isWebpAllowedForRequest = (ALLOW_DYNAMIC_SWITCH_TO_WEBP ||
+      (ALLOW_WEBP_OPT_IN && req.query.allow_webp === 'true'));
+
+    if (isWebpAllowedForRequest && result.type !== 'webp' &&
+      req.headers.accept && req.headers.accept.includes(WEBP_MIME_TYPE)) {
+      log('debug', 'Switching to WEBP');
+      result.type = 'webp';
+      result.mime = WEBP_MIME_TYPE;
+    }
   }
+
   if (req.query.fit && ALLOWED_FITS.includes(req.query.fit.toLowerCase())) {
     result.fit = req.query.fit.toLowerCase();
   }

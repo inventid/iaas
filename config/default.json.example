@@ -25,5 +25,9 @@
   "redirect_cache_timeout" : 604800,
   "timeout": {
     "conversion": 0
+  },
+  "webp": {
+    "allow_dynamic_switch": false,
+    "allow_opt_in": true
   }
 }

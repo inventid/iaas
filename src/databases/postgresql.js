@@ -54,7 +54,10 @@ export default function postgresql() {
 
   async function createToken(id, newToken) {
     try {
-      return await queryPromise(insertToken, [newToken, id]);
+      const result = await queryPromise(insertToken, [newToken, id]);
+      if (result.rowCount === 1) {
+        return newToken;
+      }
     } catch (e) {
       const message = e.toString();
       if (message.includes('duplicate key value violates unique constraint')) {

@@ -7,17 +7,17 @@ const shouldRunCleanup = () => Math.floor(Math.random() * 10) === 0;
 
 export default {
   createToken: async (id) => {
-    const newToken = uuid();
     try {
-      await database.createToken(id, newToken);
-      log('info', 'Created token successfully');
+      const newToken = await database.createToken(id, uuid());
+      if (newToken) {
+        log('info', 'Created token successfully');
+      }
       if (shouldRunCleanup()) {
         log('info', 'Running token database cleanup');
         await database.cleanupTokens();
       }
       return newToken;
     } catch (e) {
-      // Duplicate for the id
       log('error', e.stack);
       return null;
     }

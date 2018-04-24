@@ -9,6 +9,8 @@ const WEBP_MIME_TYPE = 'image/webp';
 const ALLOWED_TYPES = ['jpg', 'jpeg', 'jfif', 'jpe', 'png', 'webp'];
 const ALLOWED_FITS = ['clip', 'crop', 'canvas', 'cover'];
 
+const QUALITY_FORMATS = [WEBP_MIME_TYPE, 'image/jpeg'];
+
 const ALLOW_DYNAMIC_SWITCH_TO_WEBP = (config.has('webp') && config.has('webp.allow_dynamic_switch')
   && config.get('webp.allow_dynamic_switch'));
 const ALLOW_WEBP_OPT_IN = (config.has('webp') && config.has('webp.allow_opt_in')
@@ -74,8 +76,8 @@ export default (req, requireDimensions = true) => {
   if (req.query.fit && ALLOWED_FITS.includes(req.query.fit.toLowerCase())) {
     result.fit = req.query.fit.toLowerCase();
   }
-  // Only do this for jpg and ignore it for all other formats
-  if (req.query.quality && result.mime === 'image/jpeg') {
+  // Only do this for jpg and webp and ignore it for all other formats
+  if (req.query.quality && QUALITY_FORMATS.includes(result.mime)) {
     result.quality = Number(req.query.quality) || -1;
   }
   if (req.query.blur && req.query.blur === 'true') {

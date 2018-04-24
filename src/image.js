@@ -129,9 +129,10 @@ const setQuality = async (client, params) => {
 
   // The imagemagick 'quality' parameter has a very different meaning for
   // different image types, so it's not a good idea to just blindly pass it
-  // through. For now, we only support jpg compression, which is the most intuitive.
+  // through. For now, we only support jpg and webp compression, which is the most intuitive.
   switch (params.mime) {
     case 'image/jpeg':
+    case 'image/webp':
       return client.quality(Math.min(100, Math.max(0, params.quality)));
     default:
       //No compression supported for other types

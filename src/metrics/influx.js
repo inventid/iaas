@@ -18,8 +18,8 @@ function setup() {
     const queueToSend = queue;
     queue = [];
     lastWrite = new Date();
-    if (queue.length > 0) {
-      log('debug', 'Draining queue for influx');
+    if (queueToSend.length > 0) {
+      log('info', `Draining queue for influx. Writing ${queueToSend.length} points.`);
       influx.writePoints(queueToSend).catch(err => {
         // limit an error to once every 30 seconds
         if (!lastPrintedError || (new Date() - lastPrintedError) > 30) {
@@ -41,7 +41,8 @@ function setup() {
       const influxMetric = {
         measurement: 'response_times',
         tags: Object.assign({}, metricPoint.tags, {request_type: metricPoint.type}),
-        fields: Object.assign({}, metricPoint.fields, {duration: metricPoint.duration})
+        fields: Object.assign({}, metricPoint.fields, {duration: metricPoint.duration}),
+        timestamp: new Date(),
       };
       queue.push(influxMetric);
 

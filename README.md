@@ -131,6 +131,7 @@ The following settings are supported:
 | allow_indexing | Whether to allow robots to index the images |
 | constraints.max_width | The maximum allowed width of the image. If a request is made that succeeds this width then a redirect is issued to an equivalent image within bounds. |
 | constraints.max_height | The maximum allowed height of the image. If a request is made that succeeds this height then a redirect is issued to an equivalent image within bounds. |
+| constraints.max_input | The maximum number of megapixels of an uploaded original. Defaults to 30 megapixel. |
 | log.[level] | Whether to enable logs generated with the specified level, Where level is one of debug, info, warn or error. |
 | redirect_cache_timeout | Cache age in seconds of redirects to AWS. This value is used as the max-age in the Cache-Control header |
 | timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts |

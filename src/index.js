@@ -14,7 +14,7 @@ import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
 import timingMetric from "./metrics/timingMetric";
 import database from './databases';
 
-const MAX_IMAGE_IN_MP = 30;
+const MAX_IMAGE_IN_MP = (config.has('constraints.max_input') && config.get('constraints.max_input')) || 30;
 
 process.on('uncaughtException', function (err) {
   log('error', err);

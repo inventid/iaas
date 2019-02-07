@@ -36,6 +36,24 @@ That token is then valid once, so your client can upload the file directly, with
 
 Logging takes place in a JSON Logstash enabled format, so it's easy to get into Logstash and Kibana. Great for logging!
 
+### HTTP Codes 
+
+| Code | When | Explanation |
+|---|---|---|
+| `200` | Always | Everything went as expected |
+| `307` | Requesting | The image is prerendered, and the client is redirected to the cached value. No `X-Redirect-Info` header is set. |
+| `307` | Requesting | The image was outside the maximum bounds. The client will be redirected to the maximum image size instead. The `X-Redirect-Info` header is set. |
+| `400` | Requesting | The image parameters were not correctly set. |
+| `400` | Token | The `id` was not correctly posted to the service. It is expected in the `id` key on the request body. |
+| `400` | Uploading | The image was not correctly posted to the service. It is expected in the `image` key. |
+| `403` | Token | The requested `id` is already used. |
+| `403` | Uploading | The token is not valid. A token is valid only once, and should be requested for the same name. One can request a token by doing a `POST` to `/token`. |
+| `404` | Requesting | The image original was not available. |
+| `413` | Uploading | The image is too big in terms of Megapixels. This is to prevent a DoS-attack where a very large image is uploaded, and resized to many different formats. |
+| `500` | Healthcheck | Database is offline. | 
+| `504` | Requesting | The conversion of the image took too long and timed out. | 
+
+
 ### Options
 
 Additional options can be given when requesting or uploading images.

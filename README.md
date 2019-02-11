@@ -135,6 +135,9 @@ The following settings are supported:
 | log.[level] | Whether to enable logs generated with the specified level, Where level is one of debug, info, warn or error. |
 | redirect_cache_timeout | Cache age in seconds of redirects to AWS. This value is used as the max-age in the Cache-Control header |
 | timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts |
+| webp.allow_opt_in | Setting this flag to `true` allows clients to add the `allow_webp` (set to `true`) to dynamically switch to the webp format, if supported by the requesting browser |
+| webp.allow_dynamic_switch | Setting this flag to `true` switches all clients which support WebP to get an WebP image instead of the requested format |
+
 
 ### Database
 

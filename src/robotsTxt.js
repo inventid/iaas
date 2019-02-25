@@ -1,6 +1,6 @@
 import config from 'config';
 import {pushFile} from './aws';
-import log from './log'
+import log from './log';
 
 
 export default function robotsTxt() {

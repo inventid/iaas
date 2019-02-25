@@ -50,7 +50,7 @@ const gmToBuffer = (data) => {
       });
       stderr.once('data', (data) => {
         reject(String(data));
-      })
+      });
     });
   });
 };
@@ -206,8 +206,7 @@ export default {
         metrics.write(metric.copy(GENERATION));
       }
       aws(imageKey(params), params, awsBuffer);
-    }
-    catch (err) {
+    } catch (err) {
       const status = didTimeout(err) ? 504 : 500;
       response.status(status).end();
       if (metric) {

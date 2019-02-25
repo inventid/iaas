@@ -42,7 +42,7 @@ export async function pushFile(path, data, mime) {
   };
   try {
     await upload(S3, uploadParams);
-  } catch(e) {
+  } catch (e) {
     log('error', `Pushing of static file ${path} failed: ${e}`);
     throw e;
   }

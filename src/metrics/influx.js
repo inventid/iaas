@@ -12,7 +12,6 @@ function setup() {
   let queue = [];
   let lastWrite = new Date();
   let lastPrintedError;
-  let timeout;
 
   function drainQueue() {
     const queueToSend = queue;
@@ -42,7 +41,7 @@ function setup() {
         measurement: 'response_times',
         tags: Object.assign({}, metricPoint.tags, {request_type: metricPoint.type}),
         fields: Object.assign({}, metricPoint.fields, {duration: metricPoint.duration}),
-        timestamp: new Date(),
+        timestamp: new Date()
       };
       queue.push(influxMetric);
 
@@ -52,7 +51,7 @@ function setup() {
       } else {
         // For the case somebody receives little traffic
         const innerLast = lastWrite;
-        timeout = setTimeout(() => {
+        setTimeout(() => {
           if (innerLast !== lastWrite) {
             log('debug', 'No need to write, another write was performed in the meantime');
             return;

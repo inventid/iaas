@@ -28,6 +28,26 @@ const cacheHost = () => {
   }
 };
 
+// This method should only be used if you need to push a static file, not a generated image!
+export async function pushFile(path, data, mime) {
+  const uploadParams = {
+    Bucket: config.get('aws.bucket'),
+    Key: path,
+    ACL: 'public-read',
+    Body: data,
+    Expires: futureDate(),
+    ContentType: mime,
+    // We let any intermediate server cache this result as well
+    CacheControl: 'public'
+  };
+  try {
+    await upload(S3, uploadParams);
+  } catch (e) {
+    log('error', `Pushing of static file ${path} failed: ${e}`);
+    throw e;
+  }
+}
+
 export default async (name, params, data) => {
   // See https://github.com/inventid/iaas/issues/78
   const renderedAt = new Date();
@@ -67,3 +87,4 @@ export default async (name, params, data) => {
     log('error', e);
   }
 };
+

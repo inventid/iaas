@@ -13,6 +13,7 @@ import IntegerCounter from "./integerCounter";
 import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
 import timingMetric from "./metrics/timingMetric";
 import database from './databases';
+import robotsTxt, {syncRobotsTxt} from "./robotsTxt";
 
 const MAX_IMAGE_IN_MP = (config.has('constraints.max_input') && config.get('constraints.max_input')) || 30;
 
@@ -149,9 +150,7 @@ server.get('/_health', async (req, res) => {
   }
 });
 server.get('/robots.txt', (req, res) => {
-  const content = (config.has('allow_indexing') && config.get('allow_indexing')) ?
-    "User-agent: *\nAllow: /" : "User-agent: *\nDisallow: /";
-  res.status(200).end(content);
+  res.status(200).end(robotsTxt());
   log('debug', 'Robots.txt served');
 });
 
@@ -227,6 +226,9 @@ database.migrate((err) => {
   } else {
     const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
     const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+    // Sync robots.txt
+    syncRobotsTxt();
+
     // Log the stats every 5 minutes if enabled
     statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
     const dbChecker = setInterval(async () => {

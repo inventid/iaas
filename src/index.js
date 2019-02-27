@@ -221,25 +221,25 @@ const slowShutdown = (expressInstance, timeout = 100) => setTimeout(() => {
 
 database.migrate((err) => {
   if (err) {
-    log('error', `Error fetching client from pool: ${err}`);
+    log('error', `Error fetching client from pool for migrations: ${err}`);
     slowShutdown(null, 250);
-  } else {
-    const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
-    const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
-    // Sync robots.txt
-    syncRobotsTxt();
-
-    // Log the stats every 5 minutes if enabled
-    statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
-    const dbChecker = setInterval(async () => {
-      const isAlive = await database.isDbAlive();
-
-      if (!isAlive) {
-        clearInterval(dbChecker);
-        log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
-        // Slight timeout to handle some final requests?
-        slowShutdown(handler);
-      }
-    }, 500);
+    return;
   }
+  const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
+  const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+  // Sync robots.txt
+  syncRobotsTxt();
+
+  // Log the stats every 5 minutes if enabled
+  statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
+  const dbChecker = setInterval(async () => {
+    const isAlive = await database.isDbAlive();
+
+    if (!isAlive) {
+      clearInterval(dbChecker);
+      log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+      // Slight timeout to handle some final requests?
+      slowShutdown(handler);
+    }
+  }, 500);
 });

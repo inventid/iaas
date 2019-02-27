@@ -37,4 +37,4 @@ RUN convert -version
 
 # Run the entire thing!
 WORKDIR /opt/iaas
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=max"]
+CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=max", "--exp-backoff-restart-delay=100"]

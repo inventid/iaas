@@ -132,12 +132,12 @@ export default function postgresql() {
     return pool.connect((err, client, done) => {
       if (err) {
         log('error', `error fetching client from pool ${err}`);
-        return;
+        callback(err);
       }
       migrateAndStart(client, './migrations', () => {
         log('info', 'Database migrated to newest version');
         done(null);
-        callback();
+        callback(null);
       });
     });
   }

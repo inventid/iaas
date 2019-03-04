@@ -133,6 +133,7 @@ export default function postgresql() {
       if (err) {
         log('error', `error fetching client from pool ${err}`);
         callback(err);
+        return;
       }
       migrateAndStart(client, './migrations', () => {
         log('info', 'Database migrated to newest version');

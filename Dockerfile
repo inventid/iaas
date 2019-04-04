@@ -1,4 +1,4 @@
-FROM node:8.9
+FROM node:8.15-jessie
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \

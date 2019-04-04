@@ -22,4 +22,4 @@ export default function log(level, message) {
     };
     console.log(JSON.stringify(obj));  //eslint-disable-line no-console
   }
-};
+}

@@ -150,7 +150,7 @@ export default function postgresql() {
       'db_idleCount': idleCount,
       'db_waitingCount': waitingCount,
       'db_inUseRatio': totalCount / poolSize,
-      'db_idleRatio': idleCount / poolSize,
+      'db_idleRatio': idleCount / poolSize
     };
   }
 
@@ -167,6 +167,6 @@ export default function postgresql() {
     cleanupTokens,
     addToCache,
     getFromCache,
-    stats,
+    stats
   };
 }

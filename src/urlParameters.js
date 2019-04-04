@@ -93,4 +93,4 @@ export default function urlToParams(req, requireDimensions = true) {
     return null;
   }
   return result;
-};
+}

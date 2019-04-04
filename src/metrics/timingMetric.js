@@ -7,6 +7,8 @@ function typeOrError(type) {
   throw new Error('invalid type for a metric supplied');
 }
 
+const instance = process.env.NODE_APP_INSTANCE;
+
 export default function newMetric(metricType, {fields, tags} = {
   fields: {},
   tags: {}
@@ -33,6 +35,7 @@ export default function newMetric(metricType, {fields, tags} = {
     },
     get() {
       const duration = (stop || new Date()) - startTime;
+      tags.instance = instance;
       return {
         type,
         duration,

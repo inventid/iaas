@@ -148,63 +148,64 @@ const blur = async (client, params) => {
   return client.blur(params.blur.radius, params.blur.sigma);
 };
 
-export default {
-  magic: async function (file, params) {
-    let client = im(file).options(gmOptions);
-    client = await strip(client);
-    client = await fit(client, params);
-    client = await background(client, params);
-    client = await blur(client, params);
-    client = await setQuality(client, params);
-    client = await interlace(client, params);
-    return client;
-  },
-  writeOriented: async function (source, destination, cropParameters) {
-    // if possible, crop first (since the UA had that orientation), then orient
-    if (cropParameters) {
-      const cropped = im(source).options(gmOptions)
-        .crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
-      try {
-        await write(cropped, source);
-      } catch (e) {
-        log('error', e.stack);
-        throw e;
-      }
-    }
+export async function magic(file, params) {
+  let client = im(file).options(gmOptions);
+  client = await strip(client);
+  client = await fit(client, params);
+  client = await background(client, params);
+  client = await blur(client, params);
+  client = await setQuality(client, params);
+  client = await interlace(client, params);
+  return client;
+}
 
-    const oriented = im(source).options(gmOptions).autoOrient();
-
+export async function writeOriented(source, destination, cropParameters) {
+  // if possible, crop first (since the UA had that orientation), then orient
+  if (cropParameters) {
+    const cropped = im(source).options(gmOptions)
+      .crop(cropParameters.width, cropParameters.height, cropParameters.xOffset, cropParameters.yOffset);
     try {
-      await write(oriented, destination);
+      await write(cropped, source);
     } catch (e) {
       log('error', e.stack);
       throw e;
     }
-
-    try {
-      const imgSize = await size(im(destination).options(gmOptions));
-      return {
-        originalHeight: imgSize.height || null,
-        originalWidth: imgSize.width || null
-      };
-    } catch (e) {
-      log('error', e.stack);
-      return {
-        originalHeight: null,
-        originalWidth: null
-      };
-    }
-  },
-  imageSize: async function (path) {
-    return size(im(path).options(gmOptions));
-  },
-  imageArea: async function (path) {
-    try {
-      const imgSize = await size(im(path).options(gmOptions));
-      return imgSize.width * imgSize.height;
-    } catch (e) {
-      log('error', e);
-      return Number.MAX_SAFE_INTEGER;
-    }
   }
-};
+
+  const oriented = im(source).options(gmOptions).autoOrient();
+
+  try {
+    await write(oriented, destination);
+  } catch (e) {
+    log('error', e.stack);
+    throw e;
+  }
+
+  try {
+    const imgSize = await size(im(destination).options(gmOptions));
+    return {
+      originalHeight: imgSize.height || null,
+      originalWidth: imgSize.width || null
+    };
+  } catch (e) {
+    log('error', e.stack);
+    return {
+      originalHeight: null,
+      originalWidth: null
+    };
+  }
+}
+
+export async function imageSize(path) {
+  return size(im(path).options(gmOptions));
+}
+
+export async function imageArea(path) {
+  try {
+    const imgSize = await size(im(path).options(gmOptions));
+    return imgSize.width * imgSize.height;
+  } catch (e) {
+    log('error', e);
+    return Number.MAX_SAFE_INTEGER;
+  }
+}

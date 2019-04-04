@@ -1,4 +1,4 @@
-FROM node:8.9
+FROM node:8.15-jessie
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     apt-get clean
 
-RUN npm install -g pm2 babel-cli babel-preset-es2015 babel-preset-stage-3
+RUN yarn global add pm2 babel-cli babel-preset-es2015 babel-preset-stage-3
 
 # Export the database, originals dir and the config dir
 RUN mkdir /opt/iaas
@@ -19,9 +19,9 @@ EXPOSE 1337
 
 # Add the dependencies
 ADD .babelrc /opt/iaas/
+ADD yarn.lock /opt/iaas/yarn.lock
 ADD package.json /opt/iaas/package.json
-ADD npm-shrinkwrap.json /opt/iaas/npm-shrinkwrap.json
-RUN cd /opt/iaas && npm install
+RUN cd /opt/iaas && yarn install --pure-lockfile
 
 # Add the application
 ADD src/*.js /opt/iaas/src/

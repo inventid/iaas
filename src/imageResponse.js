@@ -3,8 +3,8 @@ require("babel-polyfill");
 import config from "config";
 import promisify from "promisify-node";
 import log from "./log";
-import dbCache from "./dbCache";
-import image from "./image";
+import * as dbCache from "./dbCache";
+import * as image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
 import metrics, {GENERATION, ORIGINAL, REDIRECT} from './metrics';
@@ -125,8 +125,7 @@ const imageKey = params =>
   `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
 
 
-export default {
-  magic: async function (params, method, response, stats = undefined, metric = undefined) {
+export async function magic(params, method, response, stats = undefined, metric = undefined) {
     if (params === null) {
       // Invalid, hence reject
       response.status(400).end();
@@ -176,6 +175,7 @@ export default {
       }
       redirectToCachedEntity(cacheValue, params, response);
       if (metric) {
+        metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
         metric.stop();
         metrics.write(metric);
@@ -200,6 +200,7 @@ export default {
       const awsBuffer = Buffer.from(browserBuffer);
       response.end(browserBuffer);
       if (metric) {
+        metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
         metric.stop();
         metrics.write(metric);
@@ -217,8 +218,9 @@ export default {
       }
       log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
     }
-  },
-  original: async function (params, method, response, metric = undefined) {
+  }
+
+export async function original(params, method, response, metric = undefined) {
     const startTime = new Date();
     const imageExists = await doesImageExist(params.name);
     if (!imageExists) {
@@ -244,16 +246,15 @@ export default {
       metrics.write(metric.copy(ORIGINAL));
     }
     log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
-  },
-  upload: async function (name, path, cropParameters) {
+  }
+  export async function upload(name, path, cropParameters) {
     const destinationPath = `${config.get('originals_dir')}/${name}`;
     return await image.writeOriented(path, destinationPath, cropParameters);
-  },
-  description(params) {
+  }
+  export function description(params) {
     return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}), quality: ${Number(params.quality) || 'auto'}`; //eslint-disable-line max-len
-  },
-  hasAllowableImageSize: async function (path, maxSizeInMegapixel) {
+  }
+  export async function hasAllowableImageSize(path, maxSizeInMegapixel) {
     const imageSize = await image.imageArea(path);
     return imageSize < (maxSizeInMegapixel * 1e6);
   }
-};

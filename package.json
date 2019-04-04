@@ -12,9 +12,9 @@
     "formidable": "^1.1.1",
     "gm": "^1.23.1",
     "influx": "^5.0.7",
-    "pg": "^6.4.1",
+    "pg": "7.9.0",
     "pg-migration": "^1.0.4",
-    "pg-native": "^1.10.1",
+    "pg-native": "2.2.0",
     "promisify-node": "^0.4.0",
     "uuid": "^3.0.1"
   },

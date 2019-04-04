@@ -39,7 +39,7 @@ export function hasFiltersApplied(params) {
   return Boolean(params.blur) || Number.isFinite(params.quality);
 }
 
-export default (req, requireDimensions = true) => {
+export default function urlToParams(req, requireDimensions = true) {
   // The default settings
   const result = {
     name: null,
@@ -93,4 +93,4 @@ export default (req, requireDimensions = true) => {
     return null;
   }
   return result;
-};
+}

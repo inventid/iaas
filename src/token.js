@@ -5,22 +5,23 @@ import database from './databases';
 
 const shouldRunCleanup = () => Math.floor(Math.random() * 10) === 0;
 
-export default {
-  createToken: async (id) => {
-    try {
-      const newToken = await database.createToken(id, uuid());
-      if (newToken) {
-        log('info', 'Created token successfully');
-      }
-      if (shouldRunCleanup()) {
-        log('info', 'Running token database cleanup');
-        await database.cleanupTokens();
-      }
-      return newToken;
-    } catch (e) {
-      log('error', e.stack);
-      return null;
+export async function createToken(id) {
+  try {
+    const newToken = await database.createToken(id, uuid());
+    if (newToken) {
+      log('info', 'Created token successfully');
     }
-  },
-  consumeToken: async (token, id) => await database.consumeToken(token, id)
-};
+    if (shouldRunCleanup()) {
+      log('info', 'Running token database cleanup');
+      await database.cleanupTokens();
+    }
+    return newToken;
+  } catch (e) {
+    log('error', e.stack);
+    return null;
+  }
+}
+
+export async function consumeToken(token, id) {
+  return await database.consumeToken(token, id);
+}

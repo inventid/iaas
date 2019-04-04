@@ -17,6 +17,12 @@ export default function newMetric(metricType, {fields, tags} = {
   tags = Object.assign({}, tags);
 
   return {
+    addFields(keyValues) {
+      Object.entries(keyValues).forEach(([key, value]) => this.addField(key, value));
+    },
+    addTags(keyValues) {
+      Object.entries(keyValues).forEach(([key, value]) => this.addTag(key, value));
+    },
     addField(key, value) {
       fields[key] = value;
       return this;

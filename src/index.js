@@ -154,23 +154,25 @@ server.get('/robots.txt', (req, res) => {
   log('debug', 'Robots.txt served');
 });
 
+function patchConnectionForTermination(req, params) {
+  req.once('close', () => onClosedConnection(imageResponse.description(params)));
+}
+
+function serveResizedImage(req, res) {
+  const params = urlParameters(req);
+  patchConnectionForTermination(req, params);
+  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
+}
+
 // The actual endpoints for fetching
-server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', (req, res) => {
-  // Serve a resized image with scaling
-  const params = urlParameters(req);
-  req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
-});
-server.get('/(:name)_(:width)_(:height).(:format)', (req, res) => {
-  // Serve a resized image
-  const params = urlParameters(req);
-  req.once('close', () => onClosedConnection(imageResponse.description(params)));
-  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
-});
+// Serve a resized image with scaling
+server.get('/(:name)_(:width)_(:height)_(:scale)x.(:format)', serveResizedImage);
+// Serve a resized image
+server.get('/(:name)_(:width)_(:height).(:format)', serveResizedImage);
 server.get('/(:name).(:format)', (req, res) => {
   // Serve the original, with optionally filters applied
   const params = urlParameters(req, false);
-  req.once('close', () => onClosedConnection(imageResponse.description(params)));
+  patchConnectionForTermination(req, params);
   if (hasFiltersApplied(params)) {
     imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
   } else {

@@ -29,14 +29,10 @@ export default function postgresql() {
     log('error', `idle client error ${err.message} ${err.stack}`);
   });
 
-  async function queryPromise(query, vars) {
-    return new Promise((resolve, reject) => pool.query(query, vars, (err, data) => err ? reject(err) : resolve(data)));
-  }
-
   async function isDbAlive() {
     const testQuery = 'SELECT 1';
     try {
-      const result = await queryPromise(testQuery, []);
+      const result = await pool.query(testQuery, []);
       return Boolean(result.rowCount && result.rowCount === 1);
     } catch (e) {
       return false;
@@ -45,7 +41,7 @@ export default function postgresql() {
 
   async function cleanupTokens() {
     try {
-      const result = await queryPromise(deleteOldTokens, []);
+      const result = await pool.query(deleteOldTokens, []);
       log('info', `Cleaned ${result.rowCount} tokens from the db`);
     } catch (e) {
       log('error', `Encountered error ${e} when cleaning up tokens`);
@@ -54,7 +50,7 @@ export default function postgresql() {
 
   async function createToken(id, newToken) {
     try {
-      const result = await queryPromise(insertToken, [newToken, id]);
+      const result = await pool.query(insertToken, [newToken, id]);
       if (result.rowCount === 1) {
         return newToken;
       }
@@ -73,7 +69,7 @@ export default function postgresql() {
   async function consumeToken(token, id) {
     const vars = [token, id];
     try {
-      const result = await queryPromise(consumeTokens, vars);
+      const result = await pool.query(consumeTokens, vars);
       return result.rowCount === 1;
     } catch (e) {
       log('error', e.stack);
@@ -91,7 +87,7 @@ export default function postgresql() {
       params.quality
     ];
 
-    const result = await queryPromise(selectImage, vars);
+    const result = await pool.query(selectImage, vars);
     if (result.rowCount && result.rowCount > 0) {
       // Cache hit
       return result.rows[0].url;
@@ -99,6 +95,7 @@ export default function postgresql() {
     // Cache miss
     return null;
   }
+
   async function addToCache(params, url, renderedAt) {
     const vars = [params.name,
       params.width,
@@ -112,7 +109,7 @@ export default function postgresql() {
     ];
 
     try {
-      const result = await queryPromise(insertImage, vars);
+      const result = await pool.query(insertImage, vars);
       return result.rowCount === 1;
     } catch (e) {
       const message = e.toString();

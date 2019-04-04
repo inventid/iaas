@@ -12,6 +12,8 @@ const deleteOldTokens = `DELETE FROM tokens WHERE valid_until < NOW() AND used=0
 const insertImage = 'INSERT INTO images (id, x, y, fit, file_type, url, blur, quality, rendered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)';
 const selectImage = 'SELECT url FROM images WHERE id=$1 AND x=$2 AND y=$3 AND fit=$4 AND file_type=$5 AND blur=$6 AND quality=$7'; //eslint-disable-line max-len
 
+const poolSize = (config.has('postgresql.pool') && Number(config.get('postgresql.pool'))) || 5;
+
 export default function postgresql() {
   const configs = {
     user: config.get('postgresql.user'),
@@ -19,7 +21,7 @@ export default function postgresql() {
     password: config.get('postgresql.password'),
     host: config.get('postgresql.host'),
     port: 5432,
-    max: 5,
+    max: poolSize,
     idleTimeoutMillis: 30000
   };
 
@@ -140,6 +142,18 @@ export default function postgresql() {
     });
   }
 
+  function stats() {
+    const { totalCount, idleCount, waitingCount} = pool;
+    return {
+      'db_maxCount': poolSize,
+      'db_totalCount': totalCount,
+      'db_idleCount': idleCount,
+      'db_waitingCount': waitingCount,
+      'db_inUseRatio': totalCount / poolSize,
+      'db_idleRatio': idleCount / poolSize,
+    };
+  }
+
   async function close() {
     return await pool.end();
   }
@@ -152,6 +166,7 @@ export default function postgresql() {
     consumeToken,
     cleanupTokens,
     addToCache,
-    getFromCache
+    getFromCache,
+    stats,
   };
 }

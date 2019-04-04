@@ -175,6 +175,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       }
       redirectToCachedEntity(cacheValue, params, response);
       if (metric) {
+        metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
         metric.stop();
         metrics.write(metric);
@@ -199,6 +200,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       const awsBuffer = Buffer.from(browserBuffer);
       response.end(browserBuffer);
       if (metric) {
+        metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
         metric.stop();
         metrics.write(metric);

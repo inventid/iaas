@@ -14,6 +14,7 @@ import metrics, {metricFromParams, REQUEST_TOKEN, UPLOAD} from "./metrics";
 import timingMetric from "./metrics/timingMetric";
 import database from './databases';
 import robotsTxt, {syncRobotsTxt} from "./robotsTxt";
+import startMigrations from './migrations';
 
 const MAX_IMAGE_IN_MP = (config.has('constraints.max_input') && config.get('constraints.max_input')) || 30;
 
@@ -116,6 +117,7 @@ const uploadImage = async (req, res) => {
   const result = await imageResponse.upload(name, files.image.path, cropParameters);
   stats.uploads.incrementAndGet();
   log('info', `Finished writing original file ${name}`);
+  await token.markAsCompleted(sentToken, name);
   res.json({
     status: 'OK',
     id: name,
@@ -231,6 +233,8 @@ database.migrate((err) => {
   const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
   // Sync robots.txt
   syncRobotsTxt();
+  // Run any required migrations
+  startMigrations();
 
   // Log the stats every 5 minutes if enabled
   statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);

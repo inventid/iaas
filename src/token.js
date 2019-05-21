@@ -25,3 +25,11 @@ export async function createToken(id) {
 export async function consumeToken(token, id) {
   return await database.consumeToken(token, id);
 }
+
+export async function markAsCompleted(token, id) {
+  return await database.markUploadAsCompleted(token, id);
+}
+
+export async function getImageIdsSince(threshold = new Date(1970,1,1)) {
+  return await database.imagesCompletedAfter(threshold);
+}

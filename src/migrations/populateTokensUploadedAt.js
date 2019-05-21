@@ -8,13 +8,13 @@ const fs = promisify('fs');
 export default async function populateUploadedAt() {
   const toEnrich = await database.getTokensWithoutUploadedAt();
 
-  if ( toEnrich.length === 0) {
+  if (toEnrich.length === 0) {
     // Done
     log('info', 'Enriching for `populateUploadedAt` completed');
     return true;
   }
 
-  for(let i = 0; i < toEnrich.length; i++) {
+  for (let i = 0; i < toEnrich.length; i = i + 1) {
     const imageId = toEnrich[i].image_id;
     const imagePath = `${config.get('originals_dir')}/${imageId}`;
 
@@ -25,7 +25,7 @@ export default async function populateUploadedAt() {
     await database.setUploadedAt(imageId, creationDate);
   }
 
-  log('info',`Enriched ${toEnrich.length} items`);
+  log('info', `Enriched ${toEnrich.length} items`);
 
   return false;
 }

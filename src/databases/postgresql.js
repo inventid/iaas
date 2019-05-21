@@ -186,7 +186,7 @@ export default function postgresql() {
   }
 
   async function nextPendingAppMigration() {
-    const result = await pool.query(selectNextAppMigration,);
+    const result = await pool.query(selectNextAppMigration);
     if (result.rowCount === 1) {
       return result.rows[0].name;
     }
@@ -216,6 +216,6 @@ export default function postgresql() {
     getTokensWithoutUploadedAt,
     setUploadedAt,
     nextPendingAppMigration,
-    markAppMigrationAsCompleted,
+    markAppMigrationAsCompleted
   };
 }

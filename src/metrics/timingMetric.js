@@ -7,6 +7,7 @@ function typeOrError(type) {
   throw new Error('invalid type for a metric supplied');
 }
 
+// eslint-disable-next-line no-process-env
 const instance = process.env.NODE_APP_INSTANCE;
 
 export default function newMetric(metricType, {fields, tags} = {

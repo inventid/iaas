@@ -2,9 +2,12 @@ import database from '../databases';
 import log from '../log';
 import populateUploadedAt from './populateTokensUploadedAt';
 
+// eslint-disable-next-line no-process-env
+const APP_INSTANCE = process.env.NODE_APP_INSTANCE;
+
 function canNodeRunMigration() {
   // Run when not in PM2 or on the first instance only
-  return !process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0';
+  return !APP_INSTANCE || APP_INSTANCE === '0';
 }
 
 function startMigration(method) {

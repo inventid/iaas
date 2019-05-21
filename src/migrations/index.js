@@ -10,21 +10,23 @@ function canNodeRunMigration() {
   return !APP_INSTANCE || APP_INSTANCE === '0';
 }
 
-function startMigration(method) {
-  return new Promise(resolve => {
+function startMigration(migration) {
+  return new Promise(async (resolve, reject) => {
     if (!canNodeRunMigration()) {
       resolve();
       return;
     }
-    const reschedule = () => setTimeout(async () => {
-      const done = await method();
+
+    try {
+      const done = await migration();
       if (!done) {
-        reschedule();
+        reject();
       } else {
         resolve();
       }
-    }, 2500);
-    reschedule();
+    } catch (e) {
+      reject();
+    }
   });
 }
 
@@ -37,12 +39,17 @@ export default async function startMigrations() {
 
   switch (next) {
     case 'uploadedAt':
-      await startMigration(populateUploadedAt);
+      try {
+        await startMigration(populateUploadedAt);
+        await database.markAppMigrationAsCompleted(next);
+        log('info', `Finished migration for ${next}`);
+      } catch (e) {
+        log('warn', `Migration for ${next} threw in the process. This migration will be retried.`);
+      }
       break;
     case null:
       log('info', 'No application migration to be run');
       return;
   }
-  await database.markAppMigrationAsCompleted(next);
   await startMigrations();
 }

@@ -130,7 +130,6 @@ const uploadImage = async (req, res) => {
     const cropParameters = cropParametersOnUpload(req);
     if (uploadCancelled) {
       // If the image is cancelled at this point, save ourselves the trouble of doing any image work
-      await handleCancelledUpload();
       return;
     }
 
@@ -140,7 +139,6 @@ const uploadImage = async (req, res) => {
       // saving it to the database, and instead let the client retry. Also there is a tiny race condition otherwise.
       // While the await for the upload is holding the cancel can occur. In that case the upload has not been marked as
       // ok (yet), so the token is freed, whereas the file is persisted to disk already.
-      await handleCancelledUpload();
       return;
     }
 

@@ -8,6 +8,7 @@ import log from '../log';
 // Queries
 const insertToken = `INSERT INTO tokens (id, image_id, valid_until, used) VALUES ($1,$2,now() + interval '15 minute', 0)`;
 const consumeTokens = `UPDATE tokens SET used=1 WHERE id=$1 AND image_id=$2 AND valid_until >= now() AND used=0`;
+const deleteToken = `DELETE FROM tokens WHERE used=1 AND uploaded_at is null AND image_id=$1`;
 const markAsCompleted = `UPDATE tokens SET uploaded_at = NOW() WHERE id=$1 AND image_id=$2 AND valid_until >= now() AND used=1`;
 const deleteOldTokens = `DELETE FROM tokens WHERE valid_until < NOW() AND used=0`;
 const selectImageIds = `SELECT image_id, uploaded_at FROM tokens WHERE uploaded_at IS NOT NULL AND uploaded_at > $1 AND used=1`;
@@ -83,6 +84,10 @@ export default function postgresql() {
       log('error', e.stack);
       return false;
     }
+  }
+
+  async function deleteTokenForImageId(id) {
+    await pool.query(deleteToken, [id]);
   }
 
   async function markUploadAsCompleted(token, id) {
@@ -207,6 +212,7 @@ export default function postgresql() {
     isDbAlive,
     createToken,
     consumeToken,
+    deleteTokenForImageId,
     cleanupTokens,
     addToCache,
     getFromCache,

@@ -94,38 +94,70 @@ const uploadImage = async (req, res) => {
     return;
   }
 
-  // Valid token
-  const form = new formidable.IncomingForm();
-  const files = await promiseUpload(form, req);
-  if (!files.image || !files.image.path) {
-    res.status(400).end();
-    metric.addTag('status', 400);
-    metrics.write(metric);
-    return;
-  }
+  let uploadCompleted = false;
+  let uploadCancelled = false;
+  // When an uploads gets cancelled in the progress, we want to make the token available again
+  const handleCancelledUpload = async () => {
+    if (!uploadCompleted && !uploadCancelled) {
+      log('info', `Freeing token for ${name} as the upload was aborted prior to completion`);
+      await token.deleteTokenForImageId(name);
+      uploadCancelled = true;
+    }
+  };
 
-  const isAllowedToHandle = await imageResponse.hasAllowableImageSize(files.image.path, MAX_IMAGE_IN_MP);
-  if (!isAllowedToHandle) {
-    log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
-    res.status(413).end();
-    metric.addTag('status', 413);
-    metrics.write(metric);
-    return;
-  }
+  try {
+    req.once('close', handleCancelledUpload);
 
-  const cropParameters = cropParametersOnUpload(req);
-  const result = await imageResponse.upload(name, files.image.path, cropParameters);
-  stats.uploads.incrementAndGet();
-  log('info', `Finished writing original file ${name}`);
-  await token.markAsCompleted(sentToken, name);
-  res.json({
-    status: 'OK',
-    id: name,
-    original_height: result.originalHeight,
-    original_width: result.originalWidth
-  });
-  metric.addTag('status', 200);
-  metrics.write(metric);
+    // Valid token
+    const form = new formidable.IncomingForm();
+    const files = await promiseUpload(form, req);
+    if (!files.image || !files.image.path) {
+      res.status(400).end();
+      metric.addTag('status', 400);
+      metrics.write(metric);
+      return;
+    }
+
+    const isAllowedToHandle = await imageResponse.hasAllowableImageSize(files.image.path, MAX_IMAGE_IN_MP);
+    if (!isAllowedToHandle) {
+      log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
+      res.status(413).end();
+      metric.addTag('status', 413);
+      metrics.write(metric);
+      return;
+    }
+
+    const cropParameters = cropParametersOnUpload(req);
+    if (uploadCancelled) {
+      // If the image is cancelled at this point, save ourselves the trouble of doing any image work
+      return;
+    }
+
+    const result = await imageResponse.upload(name, files.image.path, cropParameters);
+    if (uploadCancelled) {
+      // At this point the image would already be on disk. However as the client cannot get the final OK, we discard
+      // saving it to the database, and instead let the client retry. Also there is a tiny race condition otherwise.
+      // While the await for the upload is holding the cancel can occur. In that case the upload has not been marked as
+      // ok (yet), so the token is freed, whereas the file is persisted to disk already.
+      return;
+    }
+
+    stats.uploads.incrementAndGet();
+    log('info', `Finished writing original file ${name}`);
+    await token.markAsCompleted(sentToken, name);
+    // From this point on we no longer clear the token as the upload was successful
+    uploadCompleted = true;
+    res.json({
+      status: 'OK',
+      id: name,
+      original_height: result.originalHeight,
+      original_width: result.originalWidth
+    });
+    metric.addTag('status', 200);
+    metrics.write(metric);
+  } catch (e) {
+    await handleCancelledUpload();
+  }
 };
 
 const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len

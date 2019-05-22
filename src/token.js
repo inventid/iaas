@@ -26,6 +26,10 @@ export async function consumeToken(token, id) {
   return await database.consumeToken(token, id);
 }
 
+export async function deleteTokenForImageId(id) {
+  return await database.deleteTokenForImageId(id);
+}
+
 export async function markAsCompleted(token, id) {
   return await database.markUploadAsCompleted(token, id);
 }

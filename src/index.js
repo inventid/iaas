@@ -157,7 +157,7 @@ const uploadImage = async (req, res) => {
     });
     metric.addTag('status', 200);
     metrics.write(metric);
-  } catch(e) {
+  } catch (e) {
     await handleCancelledUpload();
   }
 };

@@ -120,10 +120,11 @@ const uploadImage = async (req, res) => {
 
     const isAllowedToHandle = await imageResponse.hasAllowableImageSize(files.image.path, MAX_IMAGE_IN_MP);
     if (!isAllowedToHandle) {
-      log('warn', `Image ${name} was too big to handle (over ${MAX_IMAGE_IN_MP} Megapixel) and hence rejected`);
+      log('warn', `Image ${name} was too big to handle (max ${MAX_IMAGE_IN_MP} megapixel allowed) and hence rejected`);
       res.status(413).end();
       metric.addTag('status', 413);
       metrics.write(metric);
+      await token.deleteTokenForImageId(name);
       return;
     }
 

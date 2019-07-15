@@ -1,4 +1,4 @@
-FROM node:8.15-jessie
+FROM node:10-stretch
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \

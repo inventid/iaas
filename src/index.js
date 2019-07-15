@@ -271,14 +271,18 @@ database.migrate((err) => {
 
   // Log the stats every 5 minutes if enabled
   statsPrinter = setInterval(() => log('stats', stats.get()), 5 * 60 * 1000);
-  const dbChecker = setInterval(async () => {
-    const isAlive = await database.isDbAlive();
+  const timeoutDelay = Math.floor(Math.random() * 2500);
+  // Delay the checking a bit randomly, as otherwise everyone hugs the connections at the same time
+  setTimeout(() => {
+    const dbChecker = setInterval(async () => {
+      const isAlive = await database.isDbAlive();
 
-    if (!isAlive) {
-      clearInterval(dbChecker);
-      log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
-      // Slight timeout to handle some final requests?
-      slowShutdown(handler);
-    }
-  }, 500);
+      if (!isAlive) {
+        clearInterval(dbChecker);
+        log('error', 'Database connection went offline! Restarting the application so we can connect to another one');
+        // Slight timeout to handle some final requests?
+        slowShutdown(handler);
+      }
+    }, 2500);
+  }, timeoutDelay);
 });

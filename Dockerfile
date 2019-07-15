@@ -1,10 +1,14 @@
-FROM node:8.15-jessie
+FROM node:10-stretch
 MAINTAINER Rogier Slag
 
 RUN apt-get update && \
     apt-get install -y imagemagick libpq-dev webp libwebp-dev && \
     apt-get autoremove -y && \
     apt-get clean
+
+# Install dumb-init as pm2-docker does not support the backoff restart delay
+RUN wget https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64.deb
+RUN dpkg -i dumb-init_*.deb
 
 RUN yarn global add pm2 babel-cli babel-preset-es2015 babel-preset-stage-3
 
@@ -39,4 +43,4 @@ RUN convert -version
 
 # Run the entire thing!
 WORKDIR /opt/iaas
-CMD ["/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=max", "--exp-backoff-restart-delay=100"]
+CMD ["dumb-init", "/usr/local/bin/pm2", "start", "index.js", "--no-daemon", "--instances=max", "--exp-backoff-restart-delay=100"]

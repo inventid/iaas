@@ -1,9 +1,11 @@
-require("babel-polyfill");
-
+import timingMetric from "../metrics/timingMetric";
 import {native} from 'pg';
 import migrateAndStart from "pg-migration";
 import config from "config";
 import log from '../log';
+import metrics, {DATABASE} from '../metrics';
+
+require("babel-polyfill");
 
 // Queries
 const insertToken = `INSERT INTO tokens (id, image_id, valid_until, used) VALUES ($1,$2,now() + interval '15 minute', 0)`;
@@ -40,24 +42,31 @@ export default function postgresql() {
 
   async function isDbAlive() {
     const testQuery = 'SELECT 1';
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'isDbAlive'}});
     try {
       const result = await pool.query(testQuery, []);
       return Boolean(result.rowCount && result.rowCount === 1);
     } catch (e) {
       return false;
+    } finally {
+      metrics.write(metric);
     }
   }
 
   async function cleanupTokens() {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'cleanupTokens'}});
     try {
       const result = await pool.query(deleteOldTokens, []);
       log('info', `Cleaned ${result.rowCount} tokens from the db`);
     } catch (e) {
       log('error', `Encountered error ${e} when cleaning up tokens`);
+    } finally {
+      metrics.write(metric);
     }
   }
 
   async function createToken(id, newToken) {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'createToken'}});
     try {
       const result = await pool.query(insertToken, [newToken, id]);
       if (result.rowCount === 1) {
@@ -71,33 +80,43 @@ export default function postgresql() {
       } else {
         log('error', message);
       }
+    } finally {
+      metrics.write(metric);
     }
     return undefined;
   }
 
   async function consumeToken(token, id) {
     const vars = [token, id];
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'consumeToken'}});
     try {
       const result = await pool.query(consumeTokens, vars);
       return result.rowCount === 1;
     } catch (e) {
       log('error', e.stack);
       return false;
+    } finally {
+      metrics.write(metric);
     }
   }
 
   async function deleteTokenForImageId(id) {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'deleteTokenForImageId'}});
+    metrics.write(metric);
     await pool.query(deleteToken, [id]);
   }
 
   async function markUploadAsCompleted(token, id) {
     const vars = [token, id];
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'markUploadAsCompleted'}});
     try {
       const result = await pool.query(markAsCompleted, vars);
       return result.rowCount === 1;
     } catch (e) {
       log('error', e.stack);
       return false;
+    } finally {
+      metrics.write(metric);
     }
   }
 
@@ -111,12 +130,15 @@ export default function postgresql() {
       params.quality
     ];
 
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'getFromCache'}});
     const result = await pool.query(selectImage, vars);
     if (result.rowCount && result.rowCount > 0) {
+      metrics.write(metric);
       // Cache hit
       return result.rows[0].url;
     }
     // Cache miss
+    metrics.write(metric);
     return null;
   }
 
@@ -132,6 +154,7 @@ export default function postgresql() {
       renderedAt
     ];
 
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'addToCache'}});
     try {
       const result = await pool.query(insertImage, vars);
       return result.rowCount === 1;
@@ -145,8 +168,10 @@ export default function postgresql() {
       } else {
         log('error', message);
       }
-      return false;
+    } finally {
+      metrics.write(metric);
     }
+    return false;
   }
 
   function migrate(callback) {
@@ -156,8 +181,10 @@ export default function postgresql() {
         callback(err);
         return;
       }
+      const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'migrate'}});
       migrateAndStart(client, './db-migrations', () => {
         log('info', 'Database migrated to newest version');
+        metrics.write(metric);
         done(null);
         callback(null);
       });
@@ -177,21 +204,29 @@ export default function postgresql() {
   }
 
   async function imagesCompletedAfter(threshold) {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'timingMetric'}});
     const result = await pool.query(selectImageIds, [threshold.toISOString()]);
+    metrics.write(metric);
     return result.rows;
   }
 
   async function getTokensWithoutUploadedAt() {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'getTokensWithoutUploadedAt'}});
     const result = await pool.query(emptyUploadedAt);
+    metrics.write(metric);
     return result.rows;
   }
 
   async function setUploadedAt(imageId, value) {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'setUploadedAt'}});
     await pool.query(setUploadedAtIfEmpty, [imageId, value]);
+    metrics.write(metric);
   }
 
   async function nextPendingAppMigration() {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'nextPendingAppMigration'}});
     const result = await pool.query(selectNextAppMigration);
+    metrics.write(metric);
     if (result.rowCount === 1) {
       return result.rows[0].name;
     }
@@ -199,11 +234,16 @@ export default function postgresql() {
   }
 
   async function markAppMigrationAsCompleted(name) {
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'markAppMigrationAsCompleted'}});
     await pool.query(markMigrationAsCompleted, [name]);
+    metrics.write(metric);
   }
 
   async function close() {
-    return await pool.end();
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'close'}});
+    const result = await pool.end();
+    metrics.write(metric);
+    return result;
   }
 
   return {

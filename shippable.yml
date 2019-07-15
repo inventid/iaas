@@ -1,11 +1,15 @@
 language: node_js
 node_js:
-  - 8.15
+  - 10
 
 notifications:
   email: false
 
 build:
+  pre_ci_boot:
+    image_name: node
+    image_tag: 10-stretch
+    pull: true
   ci:
     - node -v
     - npm -v

@@ -128,6 +128,7 @@ The following settings are supported:
 | postgresql.password | PostgresSQL password |
 | postgresql.host | Host on which the database is running |
 | postgres.database | Name of your database |
+| postgresql.pool | The size of the database pool to use |
 | allow_indexing | Whether to allow robots to index the images |
 | constraints.max_width | The maximum allowed width of the image. If a request is made that succeeds this width then a redirect is issued to an equivalent image within bounds. |
 | constraints.max_height | The maximum allowed height of the image. If a request is made that succeeds this height then a redirect is issued to an equivalent image within bounds. |
@@ -189,7 +190,7 @@ On OSX the Docker Toolbox suffices.
 1. After installing the Docker toolbox (which we will use here), you need to create a Docker machine `docker-machine create inventid --driver=virtualbox`
 2. Then define the docker machine `eval $(docker-machine env inventid)`
 3. Ensure you have a PostgreSQL instance available, see the section on _Database_ on how to achieve this
-3. Next (this also applies for Linux) we'll create the container `mkdir -p /tmp/images && docker build --tag=test . && docker run -p 1337:1337 -v /tmp/images:/opt/images -v <YOUR_GIT_REPO_LOCATION>/config:/opt/iaas/config test`
+3. Next (this also applies for Linux) we'll create the container `mkdir -p /tmp/images && docker build --tag=test . && docker run -p 1337:1337 -v /tmp/images:/opt/images -v ``pwd``/config:/opt/iaas/config test`
 4. Now you can start developing. After each change, stop the container (Ctrl-C) and re-execute the command again. Rebuilds of the container are relatively fast.
 
 Quick way to send images (ensure you have `jq` installed)

@@ -4,18 +4,18 @@
   "description": "ImageMagick as a HTTP service, using AWS S3 to store caches",
   "main": "src/index.js",
   "dependencies": {
-    "aws-sdk": "^2.7.25",
+    "aws-sdk": "^2.493.0",
     "babel-polyfill": "^6.20.0",
-    "body-parser": "^1.16.0",
-    "config": "^1.24.0",
-    "express": "^4.14.0",
+    "body-parser": "^1.19.0",
+    "config": "^3.2.0",
+    "express": "^4.17.1",
     "formidable": "^1.1.1",
     "gm": "^1.23.1",
-    "influx": "^5.0.7",
-    "pg": "7.9.0",
-    "pg-migration": "^1.0.4",
-    "pg-native": "2.2.0",
-    "promisify-node": "^0.4.0",
+    "influx": "^5.4.0",
+    "pg": "^7.11.0",
+    "pg-migration": "^1.0.6",
+    "pg-native": "^3.0.0",
+    "promisify-node": "^0.5.0",
     "uuid": "^3.0.1"
   },
   "scripts": {
@@ -45,7 +45,7 @@
     "babel-eslint": "^7.1.1",
     "babel-preset-es2015": "^6.18",
     "babel-preset-stage-3": "^6.17.0",
-    "eslint": "^4.18.2",
+    "eslint": "^4.19.1",
     "eslint-plugin-async-await": "0.0.0"
   }
 }

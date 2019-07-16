@@ -204,7 +204,7 @@ export default function postgresql() {
   }
 
   async function imagesCompletedAfter(threshold) {
-    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'timingMetric'}});
+    const metric = timingMetric(DATABASE, {tags: {sqlOperation: 'imagesCompletedAfter'}});
     const result = await pool.query(selectImageIds, [threshold.toISOString()]);
     metrics.write(metric);
     return result.rows;

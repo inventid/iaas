@@ -138,6 +138,7 @@ The following settings are supported:
 | timeout.conversion | After which amount of milliseconds should any image process be terminated. Set to 0 to disable timeouts |
 | webp.allow_opt_in | Setting this flag to `true` allows clients to add the `allow_webp` (set to `true`) to dynamically switch to the webp format, if supported by the requesting browser |
 | webp.allow_dynamic_switch | Setting this flag to `true` switches all clients which support WebP to get an WebP image instead of the requested format |
+| redis.url | An URL to a redis instance for additional caching of any redirects |
 
 
 ### Database

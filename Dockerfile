@@ -31,12 +31,14 @@ RUN cd /opt/iaas && yarn install --pure-lockfile
 ADD src/*.js /opt/iaas/src/
 ADD src/metrics/*.js /opt/iaas/src/metrics/
 ADD src/databases/*.js /opt/iaas/src/databases/
+ADD src/caches/*.js /opt/iaas/src/caches/
 ADD db-migrations /opt/iaas/db-migrations/
 ADD src/migrations /opt/iaas/src/migrations/
 RUN cd /opt/iaas/src && babel -d ../ *.js
 RUN cd /opt/iaas/src/migrations && babel -d ../../migrations *.js
 RUN cd /opt/iaas/src/metrics && babel -d ../../metrics *.js
 RUN cd /opt/iaas/src/databases && babel -d ../../databases *.js
+RUN cd /opt/iaas/src/caches && babel -d ../../caches *.js
 
 # Dump the image magick version for clarity
 RUN convert -version

@@ -4,6 +4,7 @@ import config from "config";
 import promisify from "promisify-node";
 import log from "./log";
 import * as dbCache from "./dbCache";
+import * as fastCache from "./fastCache";
 import * as image from "./image";
 import aws from "./aws";
 import {futureDate} from "./helper";
@@ -167,6 +168,21 @@ export async function magic(params, method, response, stats = undefined, metric 
     }
     log('debug', `Request for ${imageDescription}`);
 
+    const fastCacheValue = await fastCache.getFromCache(params);
+    if (fastCacheValue) {
+      log('debug', `Fast cache hit for ${imageDescription}`);
+      redirectToCachedEntity(fastCacheValue, params, response);
+      if (metric) {
+        metric.addTag('cacheHit', true);
+        metric.addTag('status', 200);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(REDIRECT));
+      }
+      return;
+    }
+
+    metric.addTag('cacheHit', false);
     const cacheValue = await dbCache.getFromCache(params);
     if (cacheValue) {
       log('debug', `Cache hit for ${imageDescription}`);
@@ -181,6 +197,7 @@ export async function magic(params, method, response, stats = undefined, metric 
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));
       }
+      await fastCache.addToCache(params, cacheValue);
       return;
     }
     if (stats) {
@@ -206,7 +223,7 @@ export async function magic(params, method, response, stats = undefined, metric 
         metrics.write(metric);
         metrics.write(metric.copy(GENERATION));
       }
-      aws(imageKey(params), params, awsBuffer);
+      await aws(imageKey(params), params, awsBuffer);
     } catch (err) {
       const status = didTimeout(err) ? 504 : 500;
       response.status(status).end();

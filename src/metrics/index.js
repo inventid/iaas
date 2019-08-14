@@ -13,8 +13,9 @@ export const UPLOAD = 'upload';
 export const ORIGINAL = 'original';
 export const REQUEST_TOKEN = 'requestToken';
 export const DATABASE = 'database';
+export const CACHE = 'cache';
 
-export const VALID_TYPES = [REQUEST, REDIRECT, GENERATION, UPLOAD_TO_CACHE, UPLOAD, ORIGINAL, REQUEST_TOKEN, DATABASE];
+export const VALID_TYPES = [REQUEST, REDIRECT, GENERATION, UPLOAD_TO_CACHE, UPLOAD, ORIGINAL, REQUEST_TOKEN, DATABASE, CACHE];
 
 export function metricFromParams(params, type = REQUEST) {
   // The -1 handles the case where an original image was requested

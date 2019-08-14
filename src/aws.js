@@ -5,6 +5,7 @@ import log from "./log";
 import metrics from './metrics';
 import {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
 import database from './databases';
+import * as fastCache from './fastCache';
 
 // The AWS config needs to be set before this object is created
 AWS.config.update({
@@ -86,5 +87,6 @@ export default async (name, params, data) => {
   } catch (e) {
     log('error', e);
   }
+  await fastCache.addToCache(params, url);
 };
 

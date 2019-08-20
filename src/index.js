@@ -215,10 +215,12 @@ server.get('/(:name).(:format)', (req, res) => {
   }
 });
 
+const isSecretKeyConfigured = config.has('secret') && config.get('secret').length > 0;
+
 // The upload stuff
 server.post('/token', async (req, res) => {
   // If we have a secret key configured, check whether it matches first
-  if (config.has('secret') && config.get('secret') !== req.body.secret) {
+  if (isSecretKeyConfigured && config.get('secret') !== req.body.secret) {
     res.status(401).json({error: 'A secret key is required for this server, and it was not supplied or incorrect'});
     return;
   }
@@ -269,7 +271,12 @@ database.migrate((err) => {
     return;
   }
   const port = process.env.PORT || 1337; //eslint-disable-line no-process-env
-  const handler = server.listen(port, () => log('info', `Server started listening on port ${port}`));
+  const handler = server.listen(port, () => {
+    log('info', `Server started listening on port ${port}`);
+    if (isSecretKeyConfigured) {
+      log('info', `Server is configured with a secret key for /token`);
+    }
+  });
   // Sync robots.txt
   syncRobotsTxt();
   // Run any required migrations

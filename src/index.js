@@ -217,6 +217,12 @@ server.get('/(:name).(:format)', (req, res) => {
 
 // The upload stuff
 server.post('/token', async (req, res) => {
+  // If we have a secret key configured, check whether it matches first
+  if (config.has('secret') && config.get('secret') !== req.body.secret) {
+    res.status(401).json({error: 'A secret key is required for this server, and it was not supplied or incorrect'});
+    return;
+  }
+
   // Create a token
   const image = req.body.id;
   const metric = timingMetric(REQUEST_TOKEN, {fields: {name: image}});

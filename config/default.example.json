@@ -29,5 +29,6 @@
   "webp": {
     "allow_dynamic_switch": false,
     "allow_opt_in": true
-  }
+  },
+  "secret": "1234hvhv1234hvp"
 }

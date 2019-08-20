@@ -139,6 +139,7 @@ The following settings are supported:
 | webp.allow_opt_in | Setting this flag to `true` allows clients to add the `allow_webp` (set to `true`) to dynamically switch to the webp format, if supported by the requesting browser |
 | webp.allow_dynamic_switch | Setting this flag to `true` switches all clients which support WebP to get an WebP image instead of the requested format |
 | redis.url | An URL to a redis instance for additional caching of any redirects |
+| secret | A potential secret key which the server and the client need to exchange in order to obtain a token. The secret key should be sent as part of the `POST /token` in `secret` variable. |
 
 
 ### Database

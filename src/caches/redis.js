@@ -17,28 +17,59 @@ export default function redis() {
   const client = redisClient.createClient({url, prefix: 'iaas--'});
   const get = promisify(client.get).bind(client);
   const setex = promisify(client.setex).bind(client);
+  const set = promisify(client.set).bind(client);
 
-  async function getFromCache(params) {
-    const metric = timingMetric(CACHE, {tags: {cacheOperation: 'getFromCache'}});
-    const result = await get(key(params));
+  async function getFromCache(keyToUse, cacheOperation) {
+    const metric = timingMetric(CACHE, {tags: {cacheOperation}});
+    const result = await get(keyToUse);
     metrics.write(metric);
     return result;
   }
 
-  async function addToCache(params, url) {
-    const metric = timingMetric(CACHE, {tags: {cacheOperation: 'addToCache'}});
-    const keyToUse = key(params);
+  async function addToTempCache(keyToUse, data, cacheOperation) {
+    const metric = timingMetric(CACHE, {tags: {cacheOperation}});
     try {
-      await setex(keyToUse, DURATION_1_DAY, url);
+      await setex(keyToUse, DURATION_1_DAY, data);
       return true;
     } catch (e) {
       const message = e.toString();
-      log('error', `error adding ${url} for ${keyToUse} to cache: ${message}`);
+      log('error', `error adding ${keyToUse} to temporary cache: ${message}`);
     } finally {
       metrics.write(metric);
     }
     return false;
   }
+
+  async function addToCache(keyToUse, data, cacheOperation) {
+    const metric = timingMetric(CACHE, {tags: {cacheOperation}});
+    try {
+      await set(keyToUse, data);
+      return true;
+    } catch (e) {
+      const message = e.toString();
+      log('error', `error adding ${keyToUse} to cache: ${message}`);
+    } finally {
+      metrics.write(metric);
+    }
+    return false;
+  }
+
+  async function getImageFromCache(params) {
+    return getFromCache(key(params), 'getImageFromCache');
+  }
+
+  async function addImageToCache(params, url) {
+      return addToTempCache(key(params), url, 'addImageToCache')
+  }
+
+  async function getSizeFromCache(params) {
+    return getFromCache(key(params), 'getSizeFromCache');
+  }
+
+  async function addSizeToCache(params, url) {
+    return addToCache(key(params), url, 'addSizeToCache')
+  }
+
 
   function close() {
     client.quit();
@@ -46,7 +77,9 @@ export default function redis() {
 
   return {
     close,
-    addToCache,
-    getFromCache
+    addImageToCache,
+    getImageFromCache,
+    getSizeFromCache,
+    addSizeToCache,
   };
 }

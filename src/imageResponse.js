@@ -168,7 +168,7 @@ export async function magic(params, method, response, stats = undefined, metric 
     }
     log('debug', `Request for ${imageDescription}`);
 
-    const fastCacheValue = await fastCache.getFromCache(params);
+    const fastCacheValue = await fastCache.getImageFromCache(params);
     if (fastCacheValue) {
       log('debug', `Fast cache hit for ${imageDescription}`);
       redirectToCachedEntity(fastCacheValue, params, response);
@@ -197,7 +197,7 @@ export async function magic(params, method, response, stats = undefined, metric 
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));
       }
-      await fastCache.addToCache(params, cacheValue);
+      await fastCache.addImageToCache(params, cacheValue);
       return;
     }
     if (stats) {

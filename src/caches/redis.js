@@ -59,17 +59,21 @@ export default function redis() {
   }
 
   async function addImageToCache(params, url) {
-      return addToTempCache(key(params), url, 'addImageToCache')
+      return addToTempCache(key(params), url, 'addImageToCache');
   }
 
-  async function getSizeFromCache(params) {
-    return getFromCache(key(params), 'getSizeFromCache');
+  async function getSizeFromCache(path) {
+    const cacheValue = await getFromCache(`___original-size-${path}`, 'getSizeFromCache');
+    if (cacheValue) {
+      return JSON.parse(cacheValue);
+    }
+
+    return null;
   }
 
-  async function addSizeToCache(params, url) {
-    return addToCache(key(params), url, 'addSizeToCache')
+  async function addSizeToCache(path, data) {
+    return addToCache(`___original-size-${path}`, JSON.stringify(data), 'addSizeToCache');
   }
-
 
   function close() {
     client.quit();
@@ -80,6 +84,6 @@ export default function redis() {
     addImageToCache,
     getImageFromCache,
     getSizeFromCache,
-    addSizeToCache,
+    addSizeToCache
   };
 }

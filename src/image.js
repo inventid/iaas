@@ -160,6 +160,18 @@ export async function magic(file, params) {
   return client;
 }
 
+export async function imageSize(path) {
+  // Check whether we have this thing in cache first
+  const cacheResult = await fastCache.getSizeFromCache(path);
+  if (cacheResult) {
+    return cacheResult;
+  }
+  const result = await size(im(path).options(gmOptions));
+  // Dont wait for adding it to the cache
+  fastCache.addSizeToCache(path, result);
+  return result;
+}
+
 export async function writeOriented(source, destination, cropParameters) {
   // if possible, crop first (since the UA had that orientation), then orient
   if (cropParameters) {
@@ -196,18 +208,6 @@ export async function writeOriented(source, destination, cropParameters) {
       originalWidth: null
     };
   }
-}
-
-export async function imageSize(path) {
-  // Check whether we have this thing in cache first
-  const cacheResult = await fastCache.getSizeFromCache(path);
-  if (cacheResult) {
-    return cacheResult;
-  }
-  const result = await size(im(path).options(gmOptions));
-  // Dont wait for adding it to the cache
-  fastCache.addSizeToCache(path, result);
-  return result;
 }
 
 export async function imageArea(path) {

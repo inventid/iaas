@@ -87,6 +87,6 @@ export default async (name, params, data) => {
   } catch (e) {
     log('error', e);
   }
-  await fastCache.addToCache(params, url);
+  await fastCache.addImageToCache(params, url);
 };
 

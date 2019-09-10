@@ -5,6 +5,7 @@ import gm from "gm";
 import config from "config";
 import log from "./log";
 import uuid from "uuid/v4";
+import * as fastCache from './fastCache';
 
 const gmOptions = {};
 if (config.has('timeout.conversion')) {
@@ -32,8 +33,8 @@ const CLEAR_TEMP_FILES_TIMEOUT = 10000;
 const write = (client, file) => {
   return new Promise((resolve, reject) => client.write(file, err => err ? reject(err) : resolve()));
 };
-const size = (client) => {
-  return new Promise((resolve, reject) => client.size({bufferStream: true}, (err, data) => err ? reject(err) : resolve(data)));
+const size = async (client) => {
+  return await new Promise((resolve, reject) => client.size({bufferStream: true}, (err, data) => err ? reject(err) : resolve(data)));
 };
 
 // Strip the image of any profiles or comments
@@ -159,6 +160,18 @@ export async function magic(file, params) {
   return client;
 }
 
+export async function imageSize(path) {
+  // Check whether we have this thing in cache first
+  const cacheResult = await fastCache.getSizeFromCache(path);
+  if (cacheResult) {
+    return cacheResult;
+  }
+  const result = await size(im(path).options(gmOptions));
+  // Dont wait for adding it to the cache
+  fastCache.addSizeToCache(path, result);
+  return result;
+}
+
 export async function writeOriented(source, destination, cropParameters) {
   // if possible, crop first (since the UA had that orientation), then orient
   if (cropParameters) {
@@ -182,7 +195,8 @@ export async function writeOriented(source, destination, cropParameters) {
   }
 
   try {
-    const imgSize = await size(im(destination).options(gmOptions));
+    // Set this into the cache early
+    const imgSize = await imageSize(destination);
     return {
       originalHeight: imgSize.height || null,
       originalWidth: imgSize.width || null
@@ -196,13 +210,9 @@ export async function writeOriented(source, destination, cropParameters) {
   }
 }
 
-export async function imageSize(path) {
-  return size(im(path).options(gmOptions));
-}
-
 export async function imageArea(path) {
   try {
-    const imgSize = await size(im(path).options(gmOptions));
+    const imgSize = await imageSize(path);
     return imgSize.width * imgSize.height;
   } catch (e) {
     log('error', e);

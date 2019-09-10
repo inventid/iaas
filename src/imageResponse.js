@@ -152,6 +152,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       redirectImageToWithinBounds(await calculateNewBounds(params), response);
       if (metric) {
         metric.addTag('status', 307);
+        metric.addTag('withinBounds', false);
         metrics.write(metric);
       }
       return;
@@ -168,12 +169,13 @@ export async function magic(params, method, response, stats = undefined, metric 
     }
     log('debug', `Request for ${imageDescription}`);
 
-    const fastCacheValue = await fastCache.getFromCache(params);
+    const fastCacheValue = await fastCache.getImageFromCache(params);
     if (fastCacheValue) {
       log('debug', `Fast cache hit for ${imageDescription}`);
       redirectToCachedEntity(fastCacheValue, params, response);
       if (metric) {
         metric.addTag('cacheHit', true);
+        metric.addTag('withinBounds', true);
         metric.addTag('status', 200);
         metric.stop();
         metrics.write(metric);
@@ -193,11 +195,12 @@ export async function magic(params, method, response, stats = undefined, metric 
       if (metric) {
         metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
+        metric.addTag('withinBounds', true);
         metric.stop();
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));
       }
-      await fastCache.addToCache(params, cacheValue);
+      await fastCache.addImageToCache(params, cacheValue);
       return;
     }
     if (stats) {
@@ -219,6 +222,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       if (metric) {
         metric.addFields(dbCache.stats());
         metric.addTag('status', 200);
+        metric.addTag('withinBounds', true);
         metric.stop();
         metrics.write(metric);
         metrics.write(metric.copy(GENERATION));

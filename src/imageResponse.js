@@ -91,7 +91,7 @@ const isHeadRequest = method => (method === 'HEAD');
 const redirectImageToWithinBounds = (params, response) => {
   const newLocation = `/${params.name}_${params.width}_${params.height}.${params.type}` +
     `?fit=${params.fit}&blur=${Boolean(params.blur)}&quality=${params.quality}`;
-  return response.status(307).set({
+  return response.status(303).set({
     'X-Redirect-Info': 'The requested image size falls outside of the allowed boundaries of this service. We are directing you to the closest available match.', //eslint-disable-line max-len
     'Location': newLocation
   }).end();
@@ -109,7 +109,7 @@ const redirectToCachedEntity = (cacheUrl, params, response) => {
     headers['Cache-Control'] = `max-age=${redirectTimeout}`;
   }
 
-  response.status(307).set(headers).end();
+  response.status(303).set(headers).end();
   response.end();
 };
 
@@ -176,7 +176,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       if (metric) {
         metric.addTag('cacheHit', true);
         metric.addTag('withinBounds', true);
-        metric.addTag('status', 200);
+        metric.addTag('status', 303);
         metric.stop();
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));
@@ -194,7 +194,7 @@ export async function magic(params, method, response, stats = undefined, metric 
       redirectToCachedEntity(cacheValue, params, response);
       if (metric) {
         metric.addFields(dbCache.stats());
-        metric.addTag('status', 200);
+        metric.addTag('status', 303);
         metric.addTag('withinBounds', true);
         metric.stop();
         metrics.write(metric);

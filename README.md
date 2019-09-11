@@ -41,7 +41,7 @@ Logging takes place in a JSON Logstash enabled format, so it's easy to get into 
 | Code | When | Explanation |
 |---|---|---|
 | `200` | Always | Everything went as expected |
-| `307` | Requesting | The image is prerendered, and the client is redirected to the cached value. No `X-Redirect-Info` header is set. |
+| `303` | Requesting | The image is prerendered, and the client is redirected to the cached value. No `X-Redirect-Info` header is set. |
 | `307` | Requesting | The image was outside the maximum bounds. The client will be redirected to the maximum image size instead. The `X-Redirect-Info` header is set. |
 | `400` | Requesting | The image parameters were not correctly set. |
 | `400` | Token | The `id` was not correctly posted to the service. It is expected in the `id` key on the request body. |

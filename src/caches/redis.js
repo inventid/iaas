@@ -59,7 +59,7 @@ export default function redis() {
   }
 
   async function addImageToCache(params, url) {
-      return addToTempCache(key(params), url, 'addImageToCache');
+    return addToTempCache(key(params), url, 'addImageToCache');
   }
 
   async function getSizeFromCache(path) {

@@ -127,155 +127,158 @@ const imageKey = params =>
 
 
 export async function magic(params, method, response, stats = undefined, metric = undefined) {
-    if (params === null) {
-      // Invalid, hence reject
-      response.status(400).end();
-      if (metric) {
-        metric.addTag('status', 400);
-        metrics.write(metric);
-      }
-      return;
+  if (params === null) {
+    // Invalid, hence reject
+    response.status(400).end();
+    if (metric) {
+      metric.addTag('status', 400);
+      metrics.write(metric);
     }
-
-    const imageExists = await doesImageExist(params.name);
-    if (!imageExists) {
-      response.status(404).end();
-      if (metric) {
-        metric.addTag('status', 404);
-        metrics.write(metric);
-      }
-      return;
-    }
-
-    // Image exists
-    if (!isRequestedImageWithinBounds(params)) {
-      redirectImageToWithinBounds(await calculateNewBounds(params), response);
-      if (metric) {
-        metric.addTag('status', 307);
-        metric.addTag('withinBounds', false);
-        metrics.write(metric);
-      }
-      return;
-    }
-
-    const imageDescription = this.description(params);
-    // Image exists and is within bounds.
-    // This method is mainly used by browsers to serve retina images
-    if (isHeadRequest(method)) {
-      response.status(200).end();
-      log('debug', `HEAD request for ${imageDescription} can be served`);
-      // No metrics here
-      return;
-    }
-    log('debug', `Request for ${imageDescription}`);
-
-    const fastCacheValue = await fastCache.getImageFromCache(params);
-    if (fastCacheValue) {
-      log('debug', `Fast cache hit for ${imageDescription}`);
-      redirectToCachedEntity(fastCacheValue, params, response);
-      if (metric) {
-        metric.addTag('cacheHit', true);
-        metric.addTag('withinBounds', true);
-        metric.addTag('status', 303);
-        metric.stop();
-        metrics.write(metric);
-        metrics.write(metric.copy(REDIRECT));
-      }
-      return;
-    }
-
-    metric.addTag('cacheHit', false);
-    const cacheValue = await dbCache.getFromCache(params);
-    if (cacheValue) {
-      log('debug', `Cache hit for ${imageDescription}`);
-      if (stats) {
-        stats.hits.incrementAndGet();
-      }
-      redirectToCachedEntity(cacheValue, params, response);
-      if (metric) {
-        metric.addFields(dbCache.stats());
-        metric.addTag('status', 303);
-        metric.addTag('withinBounds', true);
-        metric.stop();
-        metrics.write(metric);
-        metrics.write(metric.copy(REDIRECT));
-      }
-      await fastCache.addImageToCache(params, cacheValue);
-      return;
-    }
-    if (stats) {
-      stats.misses.incrementAndGet();
-    }
-
-    // Image is present but not in the correct setting
-    log('debug', `Cache miss for ${imageDescription}`);
-    sendFoundHeaders(params, response);
-
-    const clientStartTime = new Date();
-    try {
-      const browserImage = await image.magic(imagePath(params.name), params);
-      const browserBuffer = await gmToBuffer(browserImage);
-      log('info', `Creating image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
-
-      const awsBuffer = Buffer.from(browserBuffer);
-      response.end(browserBuffer);
-      if (metric) {
-        metric.addFields(dbCache.stats());
-        metric.addTag('status', 200);
-        metric.addTag('withinBounds', true);
-        metric.stop();
-        metrics.write(metric);
-        metrics.write(metric.copy(GENERATION));
-      }
-      await aws(imageKey(params), params, awsBuffer);
-    } catch (err) {
-      const status = didTimeout(err) ? 504 : 500;
-      response.status(status).end();
-      if (metric) {
-        metric.addTag('status', status);
-        metric.stop();
-        metrics.write(metric);
-        metrics.write(metric.copy(GENERATION));
-      }
-      log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
-    }
+    return;
   }
 
-export async function original(params, method, response, metric = undefined) {
-    const startTime = new Date();
-    const imageExists = await doesImageExist(params.name);
-    if (!imageExists) {
-      response.status(404).end();
-      if (metric) {
-        metric.addTag('status', 404);
-        metrics.write(metric);
-      }
-      return;
-    }
-    response.status(200).set({
-      'Content-Type': params.mime,
-      'Cache-Control': 'public',
-      Etag: `${params.name}_${params.type}`,
-      Expires: futureDate()
-    });
-    const data = await fs.readFile(imagePath(params.name));
-    response.end(data);
+  const imageExists = await doesImageExist(params.name);
+  if (!imageExists) {
+    response.status(404).end();
     if (metric) {
-      metric.addTag('status', 200);
+      metric.addTag('status', 404);
+      metrics.write(metric);
+    }
+    return;
+  }
+
+  // Image exists
+  if (!isRequestedImageWithinBounds(params)) {
+    redirectImageToWithinBounds(await calculateNewBounds(params), response);
+    if (metric) {
+      metric.addTag('status', 307);
+      metric.addTag('withinBounds', false);
+      metrics.write(metric);
+    }
+    return;
+  }
+
+  const imageDescription = this.description(params);
+  // Image exists and is within bounds.
+  // This method is mainly used by browsers to serve retina images
+  if (isHeadRequest(method)) {
+    response.status(200).end();
+    log('debug', `HEAD request for ${imageDescription} can be served`);
+    // No metrics here
+    return;
+  }
+  log('debug', `Request for ${imageDescription}`);
+
+  const fastCacheValue = await fastCache.getImageFromCache(params);
+  if (fastCacheValue) {
+    log('debug', `Fast cache hit for ${imageDescription}`);
+    redirectToCachedEntity(fastCacheValue, params, response);
+    if (metric) {
+      metric.addTag('cacheHit', true);
+      metric.addTag('withinBounds', true);
+      metric.addTag('status', 303);
       metric.stop();
       metrics.write(metric);
-      metrics.write(metric.copy(ORIGINAL));
+      metrics.write(metric.copy(REDIRECT));
     }
-    log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
+    return;
   }
-  export async function upload(name, path, cropParameters) {
-    const destinationPath = `${config.get('originals_dir')}/${name}`;
-    return await image.writeOriented(path, destinationPath, cropParameters);
+
+  metric.addTag('cacheHit', false);
+  const cacheValue = await dbCache.getFromCache(params);
+  if (cacheValue) {
+    log('debug', `Cache hit for ${imageDescription}`);
+    if (stats) {
+      stats.hits.incrementAndGet();
+    }
+    redirectToCachedEntity(cacheValue, params, response);
+    if (metric) {
+      metric.addFields(dbCache.stats());
+      metric.addTag('status', 303);
+      metric.addTag('withinBounds', true);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy(REDIRECT));
+    }
+    await fastCache.addImageToCache(params, cacheValue);
+    return;
   }
-  export function description(params) {
-    return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}), quality: ${Number(params.quality) || 'auto'}`; //eslint-disable-line max-len
+  if (stats) {
+    stats.misses.incrementAndGet();
   }
-  export async function hasAllowableImageSize(path, maxSizeInMegapixel) {
-    const imageSize = await image.imageArea(path);
-    return imageSize < (maxSizeInMegapixel * 1e6);
+
+  // Image is present but not in the correct setting
+  log('debug', `Cache miss for ${imageDescription}`);
+  sendFoundHeaders(params, response);
+
+  const clientStartTime = new Date();
+  try {
+    const browserImage = await image.magic(imagePath(params.name), params);
+    const browserBuffer = await gmToBuffer(browserImage);
+    log('info', `Creating image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
+
+    const awsBuffer = Buffer.from(browserBuffer);
+    response.end(browserBuffer);
+    if (metric) {
+      metric.addFields(dbCache.stats());
+      metric.addTag('status', 200);
+      metric.addTag('withinBounds', true);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy(GENERATION));
+    }
+    await aws(imageKey(params), params, awsBuffer);
+  } catch (err) {
+    const status = didTimeout(err) ? 504 : 500;
+    response.status(status).end();
+    if (metric) {
+      metric.addTag('status', status);
+      metric.stop();
+      metrics.write(metric);
+      metrics.write(metric.copy(GENERATION));
+    }
+    log('error', `Error occurred while creating live image ${imageDescription}: ${err}`);
   }
+}
+
+export async function original(params, method, response, metric = undefined) {
+  const startTime = new Date();
+  const imageExists = await doesImageExist(params.name);
+  if (!imageExists) {
+    response.status(404).end();
+    if (metric) {
+      metric.addTag('status', 404);
+      metrics.write(metric);
+    }
+    return;
+  }
+  response.status(200).set({
+    'Content-Type': params.mime,
+    'Cache-Control': 'public',
+    Etag: `${params.name}_${params.type}`,
+    Expires: futureDate()
+  });
+  const data = await fs.readFile(imagePath(params.name));
+  response.end(data);
+  if (metric) {
+    metric.addTag('status', 200);
+    metric.stop();
+    metrics.write(metric);
+    metrics.write(metric.copy(ORIGINAL));
+  }
+  log('info', `Serving original image ${params.name} took ${new Date() - startTime}ms`);
+}
+
+export async function upload(name, path, cropParameters) {
+  const destinationPath = `${config.get('originals_dir')}/${name}`;
+  return await image.writeOriented(path, destinationPath, cropParameters);
+}
+
+export function description(params) {
+  return `${params.name}.${params.type} (${params.width}x${params.height}px, fit: ${params.fit}, blur: ${Boolean(params.blur)}), quality: ${Number(params.quality) || 'auto'}`; //eslint-disable-line max-len
+}
+
+export async function hasAllowableImageSize(path, maxSizeInMegapixel) {
+  const imageSize = await image.imageArea(path);
+  return imageSize < (maxSizeInMegapixel * 1e6);
+}

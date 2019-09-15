@@ -212,8 +212,8 @@ export async function magic(params, method, response, stats = undefined, metric 
     sendFoundHeaders(params, response);
 
     const clientStartTime = new Date();
-    const browserImage = await image.magic(imagePath(params.name), params);
     try {
+      const browserImage = await image.magic(imagePath(params.name), params);
       const browserBuffer = await gmToBuffer(browserImage);
       log('info', `Creating image took ${new Date() - clientStartTime}ms: ${imageDescription}`);
 

@@ -2,8 +2,7 @@ import AWS from "aws-sdk";
 import config from "config";
 import {futureDate} from "./helper";
 import log from "./log";
-import metrics from './metrics';
-import {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
+import metrics, {metricFromParams, UPLOAD_TO_CACHE} from './metrics';
 import database from './databases';
 import * as fastCache from './fastCache';
 

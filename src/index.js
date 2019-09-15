@@ -161,8 +161,6 @@ const uploadImage = async (req, res) => {
   }
 };
 
-const onClosedConnection = (description) => log('warn', `Client disconnected prematurely. Terminating stream for ${description}`); //eslint-disable-line max-len
-
 const server = express();
 server.use(bodyParser.json());
 server.use((req, res, next) => {
@@ -190,7 +188,13 @@ server.get('/robots.txt', (req, res) => {
 });
 
 function patchConnectionForTermination(req, params) {
-  req.once('close', () => onClosedConnection(imageResponse.description(params)));
+  const connectionStart = new Date();
+  const description = imageResponse.description(params);
+  req.once('close', () => {
+    const connectionEnd = new Date();
+    // eslint-disable-next-line max-len
+    log('warn', `Client disconnected prematurely (${connectionEnd - connectionStart}ms after creating the connection). Terminating stream for ${description}`);
+  });
 }
 
 function serveResizedImage(req, res) {

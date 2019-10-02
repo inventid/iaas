@@ -150,7 +150,8 @@ const blur = async (client, params) => {
 };
 
 export async function magic(file, params) {
-  let client = im(file).options(gmOptions);
+  // We add the [0] so we always read the first frame. As such we do not support any animation (as intended)
+  let client = im(`${file}[0]`).options(gmOptions);
   client = await strip(client);
   client = await fit(client, params);
   client = await background(client, params);

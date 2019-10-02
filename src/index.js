@@ -176,7 +176,6 @@ server.get('/_health', async (req, res) => {
   const dbIsOk = await database.isDbAlive();
   if (dbIsOk) {
     res.status(200).end('OK');
-    log('debug', 'Healthcheck OK');
   } else {
     res.status(500).end('No database connection');
     log('error', 'Healthcheck FAILED');

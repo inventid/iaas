@@ -196,10 +196,18 @@ function patchConnectionForTermination(req, params) {
   });
 }
 
+const isFreshnessKeyConfigured = config.has('freshness') && config.get('freshness').length > 0;
+function isFreshImageRequired(req) {
+  if (!isFreshnessKeyConfigured) {
+    return false;
+  }
+  return (req.headers && req.headers['freshness-token'] && req.headers['freshness-token'] === config.get('freshness'));
+}
+
 function serveResizedImage(req, res) {
   const params = urlParameters(req);
   patchConnectionForTermination(req, params);
-  imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
+  imageResponse.magic(params, req.method, res, stats, metricFromParams(params), isFreshImageRequired(req));
 }
 
 // The actual endpoints for fetching
@@ -212,7 +220,7 @@ server.get('/(:name).(:format)', (req, res) => {
   const params = urlParameters(req, false);
   patchConnectionForTermination(req, params);
   if (hasFiltersApplied(params)) {
-    imageResponse.magic(params, req.method, res, stats, metricFromParams(params));
+    imageResponse.magic(params, req.method, res, stats, metricFromParams(params), isFreshImageRequired(req));
   } else {
     imageResponse.original(params, req.method, res, metricFromParams(params));
   }

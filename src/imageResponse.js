@@ -126,7 +126,7 @@ const imageKey = params =>
   `.b-${Boolean(params.blur)}.q-${params.quality}.${params.type}`;
 
 
-export async function magic(params, method, response, stats = undefined, metric = undefined) {
+export async function magic(params, method, response, stats = undefined, metric = undefined, shouldBeFresh = false) {
   if (params === null) {
     // Invalid, hence reject
     response.status(400).end();
@@ -170,41 +170,43 @@ export async function magic(params, method, response, stats = undefined, metric 
   log('debug', `Request for ${imageDescription}`);
 
   const fastCacheValue = await fastCache.getImageFromCache(params);
-  if (fastCacheValue) {
-    log('debug', `Fast cache hit for ${imageDescription}`);
-    redirectToCachedEntity(fastCacheValue, params, response);
-    if (metric) {
-      metric.addTag('cacheHit', true);
-      metric.addTag('withinBounds', true);
-      metric.addTag('status', 303);
-      metric.stop();
-      metrics.write(metric);
-      metrics.write(metric.copy(REDIRECT));
+  if (!shouldBeFresh) {
+    if (fastCacheValue) {
+      log('debug', `Fast cache hit for ${imageDescription}`);
+      redirectToCachedEntity(fastCacheValue, params, response);
+      if (metric) {
+        metric.addTag('cacheHit', true);
+        metric.addTag('withinBounds', true);
+        metric.addTag('status', 303);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(REDIRECT));
+      }
+      return;
     }
-    return;
-  }
 
-  metric.addTag('cacheHit', false);
-  const cacheValue = await dbCache.getFromCache(params);
-  if (cacheValue) {
-    log('debug', `Cache hit for ${imageDescription}`);
+    metric.addTag('cacheHit', false);
+    const cacheValue = await dbCache.getFromCache(params);
+    if (cacheValue) {
+      log('debug', `Cache hit for ${imageDescription}`);
+      if (stats) {
+        stats.hits.incrementAndGet();
+      }
+      redirectToCachedEntity(cacheValue, params, response);
+      if (metric) {
+        metric.addFields(dbCache.stats());
+        metric.addTag('status', 303);
+        metric.addTag('withinBounds', true);
+        metric.stop();
+        metrics.write(metric);
+        metrics.write(metric.copy(REDIRECT));
+      }
+      await fastCache.addImageToCache(params, cacheValue);
+      return;
+    }
     if (stats) {
-      stats.hits.incrementAndGet();
+      stats.misses.incrementAndGet();
     }
-    redirectToCachedEntity(cacheValue, params, response);
-    if (metric) {
-      metric.addFields(dbCache.stats());
-      metric.addTag('status', 303);
-      metric.addTag('withinBounds', true);
-      metric.stop();
-      metrics.write(metric);
-      metrics.write(metric.copy(REDIRECT));
-    }
-    await fastCache.addImageToCache(params, cacheValue);
-    return;
-  }
-  if (stats) {
-    stats.misses.incrementAndGet();
   }
 
   // Image is present but not in the correct setting
@@ -227,7 +229,9 @@ export async function magic(params, method, response, stats = undefined, metric 
       metrics.write(metric);
       metrics.write(metric.copy(GENERATION));
     }
-    await aws(imageKey(params), params, awsBuffer);
+    if (!shouldBeFresh) {
+      await aws(imageKey(params), params, awsBuffer);
+    }
   } catch (err) {
     const status = didTimeout(err) ? 504 : 500;
     response.status(status).end();

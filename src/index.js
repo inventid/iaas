@@ -185,6 +185,9 @@ server.get('/robots.txt', (req, res) => {
   res.status(200).end(robotsTxt());
   log('debug', 'Robots.txt served');
 });
+server.get('/favicon.ico', (req, res) => {
+  res.status(404);
+});
 
 function patchConnectionForTermination(req, params) {
   const connectionStart = new Date();

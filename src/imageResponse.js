@@ -1,3 +1,5 @@
+import {proxy} from "./proxy";
+
 require("babel-polyfill");
 
 import config from "config";
@@ -98,6 +100,10 @@ const redirectImageToWithinBounds = (params, response) => {
 };
 
 const redirectToCachedEntity = (cacheUrl, params, response) => {
+  if (params.proxy) {
+    proxy(cacheUrl, response);
+    return;
+  }
   // We redirect the user to the new location. We issue a temporary redirect such that the
   // request url stays the representitive url, and because temporary redirects generally
   // give less issues than permanent redirects for the odd chance that the underlying resource

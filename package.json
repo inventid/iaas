@@ -12,6 +12,7 @@
     "formidable": "^1.1.1",
     "gm": "^1.23.1",
     "influx": "^5.4.0",
+    "node-fetch": "^2.6.0",
     "pg": "^7.11.0",
     "pg-migration": "^1.0.6",
     "pg-native": "^3.0.0",

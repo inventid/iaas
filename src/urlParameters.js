@@ -49,7 +49,8 @@ export default function urlToParams(req, requireDimensions = true) {
     type: 'jpg',
     mime: 'image/jpeg',
     fit: 'clip',
-    quality: -1
+    quality: -1,
+    proxy: false
   };
 
   // Extract data
@@ -73,6 +74,9 @@ export default function urlToParams(req, requireDimensions = true) {
     }
   }
 
+  if (req.query.proxy && req.query.proxy === 'true') {
+    result.proxy = true;
+  }
   if (req.query.fit && ALLOWED_FITS.includes(req.query.fit.toLowerCase())) {
     result.fit = req.query.fit.toLowerCase();
   }

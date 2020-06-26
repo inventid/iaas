@@ -183,7 +183,8 @@ export async function magic(params, method, response, stats = undefined, metric 
       if (metric) {
         metric.addTag('cacheHit', true);
         metric.addTag('withinBounds', true);
-        metric.addTag('status', 303);
+        metric.addTag('status', params.proxy ? 303 : 200);
+        metric.addTag('proxy', params.proxy);
         metric.stop();
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));
@@ -201,8 +202,9 @@ export async function magic(params, method, response, stats = undefined, metric 
       redirectToCachedEntity(cacheValue, params, response);
       if (metric) {
         metric.addFields(dbCache.stats());
-        metric.addTag('status', 303);
         metric.addTag('withinBounds', true);
+        metric.addTag('status', params.proxy ? 303 : 200);
+        metric.addTag('proxy', params.proxy);
         metric.stop();
         metrics.write(metric);
         metrics.write(metric.copy(REDIRECT));

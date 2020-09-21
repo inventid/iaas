@@ -5,7 +5,7 @@ import log from './log';
 
 export default function robotsTxt() {
   return (config.has('allow_indexing') && config.get('allow_indexing')) ?
-    "User-agent: *\nAllow: /" : "User-agent: *\nDisallow: /";
+    "User-Agent: *\nAllow: /\n" : "User-agent: *\nDisallow: /\n";
 }
 
 export async function syncRobotsTxt() {

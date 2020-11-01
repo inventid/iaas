@@ -76,13 +76,13 @@ const calculateNewBounds = async (params) => {
   if (params.width > config.get('constraints.max_width')) {
     params.width = config.get('constraints.max_width');
     if (params.fit === 'crop') {
-      params.height = params.width / providedRatio;
+      params.height = Math.round(params.width / providedRatio);
     }
   }
   if (params.height > config.get('constraints.max_height')) {
     params.height = config.get('constraints.max_height');
     if (params.fit === 'crop') {
-      params.width = params.height * providedRatio;
+      params.width = Math.round(params.height * providedRatio);
     }
   }
   return params;

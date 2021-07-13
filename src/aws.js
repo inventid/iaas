@@ -33,7 +33,6 @@ export async function pushFile(path, data, mime) {
   const uploadParams = {
     Bucket: config.get('aws.bucket'),
     Key: path,
-    ACL: 'public-read',
     Body: data,
     Expires: futureDate(),
     ContentType: mime,
@@ -55,7 +54,6 @@ export default async (name, params, data) => {
   const uploadParams = {
     Bucket: config.get('aws.bucket'),
     Key: savedName,
-    ACL: 'public-read',
     Body: data,
     Expires: futureDate(),
     ContentType: params.mime,

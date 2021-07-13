@@ -15,8 +15,7 @@ import timingMetric from "./metrics/timingMetric";
 import database from './databases';
 import robotsTxt, {syncRobotsTxt} from "./robotsTxt";
 import startMigrations from './migrations';
-
-const MAX_IMAGE_IN_MP = (config.has('constraints.max_input') && config.get('constraints.max_input')) || 30;
+import {MAX_IMAGE_IN_MP} from "./sizes";
 
 process.on('uncaughtException', function (err) {
   log('error', err);

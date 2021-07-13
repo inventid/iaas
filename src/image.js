@@ -1,3 +1,5 @@
+import { MAX_IMAGE_ON_DISK} from "./sizes";
+
 require("babel-polyfill");
 
 import fs from "fs";
@@ -186,7 +188,12 @@ export async function writeOriented(source, destination, cropParameters) {
     }
   }
 
-  const oriented = im(source).options(gmOptions).autoOrient();
+  const maxSizeAlongAxis = Math.floor(Math.sqrt(MAX_IMAGE_ON_DISK * 1e6));
+  const oriented = im(source).options(gmOptions)
+    .autoOrient()
+    // We also reduce the saved size a bit, so the size on disk is a lot smaller, which is essential for future conversions
+    // We'll only downscale, and maintain aspect ratios
+    .resize(maxSizeAlongAxis, maxSizeAlongAxis, ">");
 
   try {
     await write(oriented, destination);
